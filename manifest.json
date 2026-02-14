@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "Xync Agent Setter",
+  "version": "1.0",
+  "description": "Sends secure-token to Xync API for allowed hosts",
+  "permissions": ["activeTab", "cookies"],
+  "host_permissions": [
+    "https://www.bybit.com/*",
+    "https://api.xync.net/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}
