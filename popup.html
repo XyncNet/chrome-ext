@@ -1,16 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="utf-8">
   <style>
     body { width: 260px; padding: 16px; font-family: system-ui, sans-serif; text-align: center; }
     button { padding: 10px 24px; font-size: 14px; cursor: pointer; border: none; border-radius: 6px; background: #4f46e5; color: #fff; }
     button:hover { background: #4338ca; }
     button:disabled { background: #a5b4fc; cursor: not-allowed; }
+    #auth { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    #auth:empty { margin-top: 0; }
+    #auth input { padding: 8px; font-size: 13px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
     #status { margin-top: 12px; font-size: 13px; color: #555; }
   </style>
 </head>
 <body>
   <button id="send">Send Token</button>
+  <div id="auth"></div>
   <div id="status"></div>
   <script src="popup.js"></script>
 </body>
