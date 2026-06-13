@@ -67,7 +67,7 @@ btn.addEventListener('click', async () => {
     }
 
     // POST to API
-    const res = await fetch('https://api.xync.net/public/set-agent', {
+    const res = await fetch('https://sse.xync.net:8443/public/set-agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
