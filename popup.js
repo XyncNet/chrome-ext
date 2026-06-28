@@ -94,7 +94,6 @@ btn.addEventListener('click', async () => {
         body: method === 'GET' || method === 'HEAD' ? undefined : htxBody,
       });
       const json = await res.json();
-      console.log('HTX user/info response:', json);
       const data = json['data'];
       if (!data) throw new Error(`HTX user/info: ${json['message'] || json['msg'] || 'code ' + json['code']}`);
       const vtoken = Object.entries(htxHeaders).find(([k]) => k.toLowerCase() === 'vtoken')?.[1];
