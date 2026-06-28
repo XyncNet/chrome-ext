@@ -5,6 +5,30 @@
 const AUTH_FIELDS = ['key', 'sec', '2fa'];
 const AUTH_LABELS = { key: 'API key', sec: 'API secret', '2fa': '2FA secret' };
 
+// A known OTC page whose JS issues the signed user/info request we need to
+// capture. If nothing was captured yet we navigate the tab here ourselves
+// instead of asking the admin to do it by hand.
+const HTX_OTC_URL = 'https://www.htx.com/en-us/fiat-crypto/c2c-common/buy-usdt-rub';
+
+// Drive the page to emit a fresh, signed user/info request (caught by
+// background.js) and wait until it lands in session storage. Returns the
+// captured {htxMethod, htxHeaders, htxBody}; throws if it never shows up.
+async function ensureHtxCapture(tab) {
+  let cap = await chrome.storage.session.get(['htxMethod', 'htxHeaders', 'htxBody']);
+  if (cap.htxHeaders) return cap;
+
+  statusEl.textContent = 'Открываю страницу OTC HTX…';
+  await chrome.tabs.update(tab.id, { url: HTX_OTC_URL });
+
+  const deadline = Date.now() + 20000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 400));
+    cap = await chrome.storage.session.get(['htxMethod', 'htxHeaders', 'htxBody']);
+    if (cap.htxHeaders) return cap;
+  }
+  throw new Error('Не удалось перехватить запрос HTX — войдите в аккаунт и повторите');
+}
+
 const statusEl = document.getElementById('status');
 const authBox = document.getElementById('auth');
 const btn = document.getElementById('send');
@@ -65,21 +89,17 @@ btn.addEventListener('click', async () => {
     } else if (host === 'www.htx.com') {
       // HTX: session lives in the HB_SSO cookie, and OTC calls carry several
       // signed headers the page generates. Rather than rebuild them we replay the
-      // page's own user/info request, captured by background.js — so the OTC page
-      // must have been opened at least once this session.
+      // page's own user/info request, captured by background.js — and if nothing
+      // was captured yet we navigate the tab to an OTC page to trigger it.
       const hbSso = await chrome.cookies.get({ url: tab.url, name: 'HB_SSO' });
-      const { htxMethod, htxHeaders, htxBody } =
-        await chrome.storage.session.get(['htxMethod', 'htxHeaders', 'htxBody']);
       if (!hbSso) {
         statusEl.textContent = '⚠ Cookie "HB_SSO" not found';
         btn.disabled = false;
         return;
       }
-      if (!htxHeaders) {
-        statusEl.textContent = '⚠ Запрос не перехвачен — откройте страницу OTC на HTX и нажмите снова';
-        btn.disabled = false;
-        return;
-      }
+      // replay the page's signed user/info request, navigating to an OTC page
+      // ourselves to trigger a fresh capture if we don't have one yet
+      const { htxMethod, htxHeaders, htxBody } = await ensureHtxCapture(tab);
       // headers the browser controls itself can't be forwarded via fetch — drop them
       const FORBIDDEN = /^(accept-encoding|accept-charset|access-control|connection|content-length|cookie|date|dnt|expect|host|keep-alive|origin|permissions-policy|proxy-|sec-|referer|te|trailer|transfer-encoding|upgrade|via|user-agent)/i;
       const headers = {};
