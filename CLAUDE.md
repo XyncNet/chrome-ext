@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Chrome Extension (Manifest V3) called "Xync Agent Setter". It extracts authentication cookies and user profile data from Bybit (`www.bybit.com`) and sends them to the Xync backend (`api.xync.net/public/set-agent`) to establish an agent relationship.
+Chrome Extension (Manifest V3) called "Xync Agent Setter". It extracts authentication cookies/headers and user profile data from supported exchanges (currently Bybit `www.bybit.com` and HTX `www.htx.com`) and sends them to the Xync backend (`api.xync.net/public/set-agent`) to establish an agent relationship. The popup branches per host; adding an exchange means adding a host branch in `popup.js` and the host to `ALLOWED_HOSTS` in `background.js` plus `host_permissions` in `manifest.json`.
 
 ## Development
 
@@ -16,14 +16,14 @@ No build system, bundler, or package manager. The extension runs from raw source
 
 Three files make up the entire extension:
 
-- **`background.js`** — Service worker that gates the extension icon to only be enabled on allowed hosts (`www.bybit.com`). Listens to `chrome.tabs.onUpdated` and `chrome.tabs.onActivated`.
-- **`popup.js`** — Core logic triggered by button click: extracts `secure-token` and `deviceId` cookies from the active tab, fetches user profile from the Bybit API, then POSTs the combined payload to the Xync backend.
+- **`background.js`** — Service worker that (1) gates the extension icon to only be enabled on allowed hosts (`www.bybit.com`, `www.htx.com`) via `chrome.tabs.onUpdated`/`onActivated`, and (2) uses `chrome.webRequest` to capture HTX's signed `user/info` request (method, headers incl. `Vtoken`, body) into `chrome.storage.session` so the popup can replay it.
+- **`popup.js`** — Core logic triggered by button click, branched per host. **Bybit:** reads `secure-token`/`deviceId` cookies and POSTs to the Bybit personal-info API. **HTX:** reads the `HB_SSO` cookie and replays the captured `user/info` request (HTX signs requests with headers we can't rebuild, so the OTC page must have been opened once to capture it). Either branch builds `{host, uid, auth, profile}` and POSTs it to the Xync backend.
 - **`popup.html`** — Single-button UI with inline CSS. Fixed 260px width popup.
 
-**Data flow:** Button click → get active tab → read cookies → fetch Bybit user profile → POST to `api.xync.net` → display expiration date (ru-RU locale).
+**Data flow:** Button click → get active tab → per-host: read cookies (HTX also replays the captured `user/info` request) → obtain user profile → POST to `api.xync.net` → display expiration date (ru-RU locale).
 
 ## Key Details
 
 - Vanilla JavaScript (no TypeScript, no framework)
-- Permissions: `activeTab`, `cookies`; host permissions restricted to `bybit.com` and `api.xync.net`
+- Permissions: `activeTab`, `cookies`, `webRequest`, `storage`; host permissions restricted to `bybit.com`, `htx.com`, and `api.xync.net`
 - No tests, no linter, no formatter configured

