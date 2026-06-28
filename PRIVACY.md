@@ -2,10 +2,10 @@
 
 _Last updated: 2026-06-29_
 
-Xync Agent Setter ("the Extension") lets you connect your own account on a
-supported cryptocurrency exchange (currently Bybit and HTX) to the Xync platform
-so that Xync can act as your authorized trading agent. This policy explains what
-data the Extension handles and why.
+Xync Agent Setter ("the Extension") is for Xync partners who want to grant the
+Xync bot temporary, authorized control of their own cryptocurrency exchange account
+(currently Bybit and HTX), so the bot can operate it on their behalf for a limited
+time. This policy explains what data the Extension handles and why.
 
 ## What the Extension does
 

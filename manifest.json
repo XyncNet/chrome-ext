@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Xync Agent Setter",
   "version": "1.1.0",
-  "description": "Connect your own Bybit or HTX account to Xync as a trading agent, with your consent.",
+  "description": "For Xync partners: grant the Xync bot temporary control over your own Bybit or HTX exchange account.",
   "homepage_url": "https://xync.net",
   "minimum_chrome_version": "102",
   "permissions": ["activeTab", "cookies", "webRequest", "storage"],

@@ -13,16 +13,17 @@ Copy/paste material for the Developer Dashboard. Fill the `<...>` placeholders.
 ## Listing basics
 
 - **Name:** Xync Agent Setter
-- **Summary (≤132 chars):** Connect your own Bybit or HTX account to Xync as a trading agent, with your consent.
+- **Summary (≤132 chars):** For Xync partners: grant the Xync bot temporary control over your own Bybit or HTX exchange account.
 - **Category:** Productivity (or Workflow & Planning)
 - **Language:** English (add Russian translation if desired)
-- **Privacy policy URL:** `<host PRIVACY.md publicly, e.g. https://xync.net/privacy>` (REQUIRED)
+- **Privacy policy URL:** `https://xync.net/PRIVACY.md` (REQUIRED — live)
 - **Support email / website:** support@xync.net / https://xync.net
 
 ## Detailed description (listing body)
 
-Xync Agent Setter connects an exchange account you already own to the Xync platform
-so Xync can operate as your authorized OTC/P2P trading agent.
+Xync Agent Setter is for Xync partners who want to grant the Xync trading bot
+temporary, authorized control of an exchange account they own (Bybit or HTX), so
+the bot can operate (trade OTC/P2P) on their behalf for a limited time.
 
 How it works:
 1. Sign in to your Bybit or HTX account as usual.
@@ -39,9 +40,10 @@ details.
 
 ## Single purpose
 
-Single, narrow purpose: authenticate the user to the Xync platform by collecting,
-on explicit click, the session/profile data of the user's own Bybit or HTX account
-and submitting it to the Xync backend to establish an agent relationship.
+Single, narrow purpose: let a Xync partner authorize the Xync bot to temporarily
+operate the partner's own Bybit or HTX account, by collecting — on explicit click —
+that account's session/profile data (and optional API credentials) and submitting it
+to the Xync backend to establish a time-limited agent relationship.
 
 ## Permission justifications (paste into the dashboard)
 
@@ -80,7 +82,7 @@ Certifications (all true for this extension — check all three):
 
 ## Pre-submission checklist
 
-- [ ] Privacy policy from `PRIVACY.md` is hosted at a public URL and entered in the dashboard.
+- [x] Privacy policy hosted at https://xync.net/PRIVACY.md — enter it in the dashboard.
 - [ ] HTX flow verified end-to-end (the `user/info` replay actually returns profile data).
 - [ ] Confirm `support@xync.net` is monitored, or replace it everywhere.
 - [ ] 1280×800 (or 640×400) screenshots prepared; 128×128 store icon uploaded.
