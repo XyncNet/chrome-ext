@@ -120,19 +120,22 @@ btn.addEventListener('click', async () => {
     if (!res.ok) throw new Error(`Server responded ${res.status}`);
 
     const { exp, need } = await res.json();
-    const date = new Date(exp * 1000).toLocaleString('ru-RU');
+    const date = exp ? new Date(exp * 1000).toLocaleString('ru-RU') : null;
 
     if (need && need.length) {
       // agent saved, but still missing API auth — prompt for the missing fields
       renderAuthInputs(need);
       btn.textContent = 'Send Data';
       const labels = need.map((f) => AUTH_LABELS[f] || f).join(', ');
-      statusEl.textContent = `Агент ${host} активен до ${date}. Добавьте ${labels} и нажмите снова.`;
+      const head = date ? `Агент ${host} активен до ${date}.` : `Агент ${host} сохранён.`;
+      statusEl.textContent = `${head} Добавьте ${labels} и нажмите снова.`;
     } else {
       // fully provisioned — clear any inputs and show the expiry
       authBox.innerHTML = '';
       btn.textContent = 'Send Token';
-      statusEl.textContent = `Your ${host} agent on Xync available until: ${date}`;
+      statusEl.textContent = date
+        ? `Your ${host} agent on Xync available until: ${date}`
+        : `Your ${host} agent on Xync is set.`;
     }
   } catch (err) {
     statusEl.textContent = `✗ ${err.message}`;
