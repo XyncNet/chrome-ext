@@ -2,8 +2,8 @@
 // (POST /public/set-agent) reports which are still missing in its `need` reply;
 // we render an input per missing field and merge what the admin types into the
 // `auth` of the next request.
-const AUTH_FIELDS = ['key', 'sec', '2fa'];
-const AUTH_LABELS = { key: 'API key', sec: 'API secret', '2fa': '2FA secret' };
+const AUTH_FIELDS = ['key', 'sec', '2fa', 'pass'];
+const AUTH_LABELS = { key: 'API key', sec: 'API secret', pass: 'Password', '2fa': '2FA secret' };
 
 // A known OTC page whose JS issues the signed user/info request we need to
 // capture. If nothing was captured yet we navigate the tab here ourselves
@@ -117,10 +117,11 @@ btn.addEventListener('click', async () => {
       const data = json['data'];
       if (!data) throw new Error(`HTX user/info: ${json['message'] || json['msg'] || 'code ' + json['code']}`);
       const vtoken = Object.entries(htxHeaders).find(([k]) => k.toLowerCase() === 'vtoken')?.[1];
+      const userAgent = Object.entries(htxHeaders).find(([k]) => k.toLowerCase() === 'user-agent')?.[1];
       payload = {
         host: host,
         uid: Number(data['uid']),
-        auth: {cookies: {"HB_SSO": hbSso.value}, headers: {"Vtoken": vtoken}, ...extra},
+        auth: {cookies: {"HB_SSO": hbSso.value}, headers: {"vtoken": vtoken, "user-agent": userAgent}, ...extra},
         profile: {rname: data['realName'], nick: data['userName']},
       }
     } else {
