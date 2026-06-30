@@ -128,7 +128,7 @@ btn.addEventListener('click', async () => {
       // MEXC: the web-session token is the u_id cookie; requests are also tagged
       // with a device fingerprint that lives in the x-mxc-fingerprint cookie and
       // is replayed back as the device-id header. We read both from cookies, then
-      // call user_info for the profile (digitalId = uid, authRealName = real name).
+      // hit two endpoints: P2P user (realName + nickName) and user_info (numeric uid).
       const uId = await chrome.cookies.get({ url: tab.url, name: 'u_id' });
       if (!uId) {
         statusEl.textContent = '⚠ Cookie "u_id" not found';
@@ -136,29 +136,39 @@ btn.addEventListener('click', async () => {
         return;
       }
       const fp = await chrome.cookies.get({ url: tab.url, name: 'x-mxc-fingerprint' });
-      // chash is not exposed in user_info (nor in cookies of that request). If MEXC
-      // ever sets it as a cookie we forward it; otherwise it stays out until we know
-      // its real carrier — see note in the PR/commit.
+      // chash is not exposed on profile reads (nor in cookies). If MEXC ever sets it
+      // as a cookie we forward it; otherwise it stays out until we know its carrier.
       const chash = await chrome.cookies.get({ url: tab.url, name: 'chash' });
-      const res = await fetch("https://www.mexc.com/ucenter/api/user_info", {
+
+      // Profile (realName + nickName) comes from the P2P user endpoint — a plain
+      // cookie-authed GET. It carries no numeric id (only a memberId hash)...
+      const p2pRes = await fetch("https://www.mexc.com/api/platform/p2p/api/user", {
+        method: "GET",
+        credentials: "include",
+        headers: { "language": "en-US", "x-platform-type": "web", "x-device-id": "unknowndeviceid" },
+      });
+      const p2pJson = await p2pRes.json();
+      const p2p = p2pJson['data'];
+      if (!p2p) throw new Error(`MEXC p2p/user: ${p2pJson['msg'] || 'code ' + p2pJson['code']}`);
+
+      // ...so the numeric uid still comes from ucenter/user_info's digitalId
+      // (= the trochilus-uid request header).
+      const uiRes = await fetch("https://www.mexc.com/ucenter/api/user_info", {
         method: "POST",
         credentials: "include",
-        headers: {
-          "ucenter-token": uId.value,
-          "device-id": fp?.value || "",
-          "language": "en-US",
-        },
+        headers: { "ucenter-token": uId.value, "device-id": fp?.value || "", "language": "en-US" },
       });
-      const json = await res.json();
-      const data = json['data'];
-      if (!data) throw new Error(`MEXC user_info: ${json['msg'] || json['message'] || 'code ' + json['code']}`);
+      const uiJson = await uiRes.json();
+      const ui = uiJson['data'];
+      if (!ui) throw new Error(`MEXC user_info: ${uiJson['msg'] || 'code ' + uiJson['code']}`);
+
       const headers = { "device-id": fp?.value };
       if (chash?.value) headers["chash"] = chash.value;
       payload = {
         host: host,
-        uid: Number(data['digitalId']),
+        uid: Number(ui['digitalId']),
         auth: {cookies: {"u_id": uId.value}, headers, ...extra},
-        profile: {rname: data['authRealName']},
+        profile: {rname: p2p['realName'], nick: p2p['nickName']},
       }
     } else {
       statusEl.textContent = `⚠ Unsupported host: ${host}`;
