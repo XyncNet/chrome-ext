@@ -1,14 +1,15 @@
 {
   "manifest_version": 3,
   "name": "Xync Agent Setter",
-  "version": "1.1.0",
-  "description": "For Xync partners: grant the Xync bot temporary control over your own Bybit or HTX exchange account.",
+  "version": "1.2.0",
+  "description": "For Xync partners: grant the Xync bot temporary control over your own Bybit, HTX or MEXC exchange account.",
   "homepage_url": "https://xync.net",
   "minimum_chrome_version": "102",
   "permissions": ["activeTab", "cookies", "webRequest", "storage"],
   "host_permissions": [
     "https://www.bybit.com/*",
     "https://www.htx.com/*",
+    "https://www.mexc.com/*",
     "https://api.xync.net/*"
   ],
   "action": {

@@ -1,4 +1,4 @@
-const ALLOWED_HOSTS = ['www.bybit.com', 'www.htx.com'];
+const ALLOWED_HOSTS = ['www.bybit.com', 'www.htx.com', 'www.mexc.com'];
 
 function updateIcon(tabId, url) {
   try {

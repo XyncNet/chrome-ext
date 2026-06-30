@@ -124,6 +124,42 @@ btn.addEventListener('click', async () => {
         auth: {cookies: {"HB_SSO": hbSso.value}, headers: {"vtoken": vtoken, "user-agent": userAgent}, ...extra},
         profile: {rname: data['realName'], nick: data['userName']},
       }
+    } else if (host === 'www.mexc.com') {
+      // MEXC: the web-session token is the u_id cookie; requests are also tagged
+      // with a device fingerprint that lives in the x-mxc-fingerprint cookie and
+      // is replayed back as the device-id header. We read both from cookies, then
+      // call user_info for the profile (digitalId = uid, authRealName = real name).
+      const uId = await chrome.cookies.get({ url: tab.url, name: 'u_id' });
+      if (!uId) {
+        statusEl.textContent = '⚠ Cookie "u_id" not found';
+        btn.disabled = false;
+        return;
+      }
+      const fp = await chrome.cookies.get({ url: tab.url, name: 'x-mxc-fingerprint' });
+      // chash is not exposed in user_info (nor in cookies of that request). If MEXC
+      // ever sets it as a cookie we forward it; otherwise it stays out until we know
+      // its real carrier — see note in the PR/commit.
+      const chash = await chrome.cookies.get({ url: tab.url, name: 'chash' });
+      const res = await fetch("https://www.mexc.com/ucenter/api/user_info", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "ucenter-token": uId.value,
+          "device-id": fp?.value || "",
+          "language": "en-US",
+        },
+      });
+      const json = await res.json();
+      const data = json['data'];
+      if (!data) throw new Error(`MEXC user_info: ${json['msg'] || json['message'] || 'code ' + json['code']}`);
+      const headers = { "device-id": fp?.value };
+      if (chash?.value) headers["chash"] = chash.value;
+      payload = {
+        host: host,
+        uid: Number(data['digitalId']),
+        auth: {cookies: {"u_id": uId.value}, headers, ...extra},
+        profile: {rname: data['authRealName']},
+      }
     } else {
       statusEl.textContent = `⚠ Unsupported host: ${host}`;
       btn.disabled = false;
