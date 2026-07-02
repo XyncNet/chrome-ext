@@ -80,10 +80,12 @@ btn.addEventListener('click', async () => {
       const profile = (await (await fetch("https://www.bybit.com/x-api/fiat/otc/user/personal/info", {
         "method": "POST"
       })).json())['result']
+      // navigator.userAgent is the UA the browser just sent on the fetch above;
+      // forward it so the backend replays calls as the same client (like HTX).
       payload = {
         host: host,
         uid: Number(profile['userId']),
-        auth: {cookies: {"secure-token": secTok.value, deviceId: deviceId.value}, ...extra},
+        auth: {cookies: {"secure-token": secTok.value, deviceId: deviceId.value}, headers: {"user-agent": navigator.userAgent}, ...extra},
         profile: {rname: profile['realName'], nick: profile['nickName'], email: profile['email'], cc: profile['kycCountryCode']},
       }
     } else if (host === 'www.htx.com') {
