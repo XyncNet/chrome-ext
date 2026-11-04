@@ -1,19 +1,69 @@
-.xync-tags {
-  grid-column: 1 / -1;
-  font: 11px/1.5 system-ui, sans-serif;
-  text-align: left;
+/* The P2P listing cut down to the filter, the ads and the pager, under Bybit's header and P2P
+   menu. An allow-list where Bybit's banners differ with the login, so unseen ones go too. */
+.trade-list > :not(.trade-list__main),
+.trade-list__main > :not(.trade-list__wrapper, .p2p-home__skeleton),
+.security-notice__announcement,
+.new-user-ads-carousel-row,
+tr.new-user-ads,
+thead .moly-tag,
+.moly-popover-highlight.moly-popover-show-close,
+#__by_uniframe_footer__ {
+  display: none !important;
 }
 
+/* Bybit leaves its skeleton hidden along with the list. It hardly shows on its own, but the
+   filter holds the list for seconds: without it the page stays blank till the ads are in. */
+.p2p-home__skeleton {
+  visibility: visible !important;
+}
+
+.xync-tags {
+  grid-column: 1 / -1;
+  font: 600 13px/1.5 system-ui, sans-serif;
+}
+
+/* Tags are a part of the ad above them: closer to it, with Bybit's divider under them, not
+   between. !important: its table rules are the more specific and align the only cell right. */
 div.xync-tags,
 .xync-tags td {
-  padding: 2px 8px 6px;
+  padding: 0 0 16px !important;
+  text-align: left !important;
+}
+
+tr:has(+ .xync-tags) td {
+  padding-bottom: 8px !important;
+}
+
+tr:has(+ .xync-tags)::after {
+  display: none !important;
 }
 
 .xync-tags span {
   display: inline-block;
-  margin: 0 4px 2px 0;
-  padding: 0 5px;
+  margin: 0 4px 4px 0;
+  padding: 1px 7px;
   border-radius: 4px;
-  color: #f7a600;
-  background: rgba(247, 166, 0, 0.14);
+  color: #fff;
+  background: #64748b;
 }
+
+/* A color per parsed field, the same in every ad; paired fields share a hue. Solid, so a tag
+   reads alike on Bybit's light and dark themes. */
+.xync-tags [data-field='banks'] { background: #1d4ed8; }
+.xync-tags [data-field='bank_side'] { color: #111; background: #93c5fd; }
+.xync-tags [data-field='cash_cities'] { background: #0f766e; }
+.xync-tags [data-field='from_party'] { background: #7c3aed; }
+.xync-tags [data-field='to_party'] { color: #111; background: #c4b5fd; }
+.xync-tags [data-field='lk'] { color: #111; background: #a3e635; }
+.xync-tags [data-field='ppo'] { color: #111; background: #22d3ee; }
+.xync-tags [data-field='slip'] { color: #111; background: #facc15; }
+.xync-tags [data-field='abuser'] { background: #be123c; }
+.xync-tags [data-field='slavic'] { color: #111; background: #f9a8d4; }
+.xync-tags [data-field='cred'] { color: #111; background: #fb923c; }
+.xync-tags [data-field='mtl_like'] { background: #a21caf; }
+.xync-tags [data-field='scale'] { background: #15803d; }
+.xync-tags [data-field='fix_amounts'] { color: #111; background: #5eead4; }
+.xync-tags [data-field='trans_type'] { background: #c2410c; }
+.xync-tags [data-field='contact'] { background: #78350f; }
+.xync-tags [data-field='is_intermediary'] { background: #334155; }
+.xync-tags [data-field='intermed_forbid'] { color: #111; background: #fca5a5; }

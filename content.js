@@ -40,7 +40,11 @@
     const nicks = new Set(ads.map((a) => a.nick));
     const hits = [];
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) if (nicks.has(norm(walker.currentNode.nodeValue))) hits.push(walker.currentNode);
+    while (walker.nextNode()) {
+      const hit = walker.currentNode;
+      // A nick in a block content.css hides isn't a row: its ad would take the row's tags.
+      if (nicks.has(norm(hit.nodeValue)) && hit.parentElement.checkVisibility()) hits.push(hit);
+    }
     if (!hits.length) return [];
 
     // The list is the deepest ancestor of most hits: a nick elsewhere on the page can't shift it.
@@ -77,7 +81,8 @@
     const res = el(isTr ? 'tr' : 'div', BOX);
     const wrap = isTr ? res.appendChild(el('td')) : res;
     if (isTr) wrap.colSpan = row.cells.length;
-    for (const tag of tags.length ? tags : [NO_LIMITS]) wrap.appendChild(el('span', '', tag));
+    for (const tag of tags.length ? tags : [NO_LIMITS])
+      wrap.appendChild(el('span', '', tag)).dataset.field = tag.split(':')[0]; // "field: value", colored by field
     return res;
   }
 
