@@ -35,9 +35,10 @@ How it works:
 
 Agent setup only runs when you click the extension. It only works on Bybit and HTX
 and sends data solely to api.xync.net. On Bybit's USDT/RUB P2P pages it also shows
-Xync's parsed ad conditions under the ads, sending only the listed ads' IDs. It
-collects no browsing history and does nothing in the background on other sites. See
-the privacy policy for full details.
+Xync's parsed ad conditions under the ads and filters the ads by them, for users
+signed in to Xync, sending only the listed ads' IDs and the chosen filter. It collects
+no browsing history and does nothing in the background on other sites. See the privacy
+policy for full details.
 
 ## Single purpose
 
@@ -56,11 +57,12 @@ to the Xync backend to establish a time-limited agent relationship.
   the per-session `Vtoken` signing header that HTX adds to its OTC profile call,
   which the extension cannot reproduce. No requests are blocked or modified.
 - **storage** — Hold the captured HTX request (method/headers/body) in
-  `chrome.storage.session` (in-memory) between page load and the user's click.
+  `chrome.storage.session` (in-memory) between page load and the user's click, and
+  the user's Xync login token in `chrome.storage.local`.
 - **Host permissions** (`www.bybit.com`, `www.htx.com`, `api.xync.net`) — Read
   cookies/profile from the two supported exchanges and POST the result to the Xync
-  backend; on Bybit's P2P pages read the listed ads and show their parsed conditions.
-  No broad `<all_urls>` access is requested.
+  backend; on Bybit's P2P pages read the listed ads, show their parsed conditions and
+  filter the page's list by them. No broad `<all_urls>` access is requested.
 
 ## Remote code
 

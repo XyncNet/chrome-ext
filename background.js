@@ -55,14 +55,25 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders', 'extraHeaders']
 );
 
-// Parsed conditions of the ads on an exchange page, for content.js: bound by the page's
-// CORS, it can't reach api.xync.net itself, this worker can (host_permissions).
-chrome.runtime.onMessage.addListener(({ host, ids }, _sender, reply) => {
-  const query = new URLSearchParams({ host });
-  for (const id of ids) query.append('ids', id);
-  fetch(`https://api.xync.net/public/ad-tags?${query}`)
-    .then(async (r) => (r.ok ? { tags: await r.json() } : { error: `Xync ${r.status}: ${await r.text()}` }))
-    .catch((e) => ({ error: `Xync: ${e.message}` }))
-    .then(reply);
+// Xync API for content.js: bound by the page's CORS, it can't reach api.xync.net itself, this
+// worker can (host_permissions). The login's token comes in the `Authorization` response
+// header and is kept here for good: the backend renews an expired one by itself.
+async function api({ path, body }) {
+  const { token } = await chrome.storage.local.get('token');
+  const headers = { ...(token && { Authorization: token }), ...(body && { 'content-type': 'application/json' }) };
+  try {
+    const init = { method: body ? 'POST' : 'GET', headers, body: body && JSON.stringify(body) };
+    const res = await fetch(`https://api.xync.net${path}`, init);
+    const auth = res.headers.get('authorization');
+    if (auth) await chrome.storage.local.set({ token: auth });
+    const text = await res.text();
+    return res.ok ? { data: JSON.parse(text) } : { status: res.status, error: `Xync ${res.status}: ${text}` };
+  } catch (e) {
+    return { error: `Xync: ${e.message}` };
+  }
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+  api(msg).then(reply);
   return true; // the reply is async
 });

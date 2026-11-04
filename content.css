@@ -17,3 +17,98 @@ div.xync-tags,
   color: #f7a600;
   background: rgba(247, 166, 0, 0.14);
 }
+
+.xync-filter {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(360px, calc(100vw - 32px));
+  font: 12px/1.4 system-ui, sans-serif;
+  color: #eaecef;
+}
+
+.xync-filter[hidden],
+.xync-panel[hidden] {
+  display: none;
+}
+
+.xync-filter button {
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+  color: #111;
+  background: #f7a600;
+  cursor: pointer;
+}
+
+.xync-filter button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.xync-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: #1f2329;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.xync-hint {
+  margin-bottom: 6px;
+  color: #9aa0a6;
+}
+
+.xync-group {
+  margin-bottom: 6px;
+}
+
+.xync-group b {
+  display: block;
+  font-weight: 600;
+}
+
+.xync-group span {
+  display: inline-block;
+  margin: 2px 4px 0 0;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #363c44;
+  cursor: pointer;
+  user-select: none;
+}
+
+.xync-group span.only {
+  color: #111;
+  background: #20b26c;
+}
+
+.xync-group span.skip {
+  color: #fff;
+  background: #ef454a;
+  text-decoration: line-through;
+}
+
+.xync-note {
+  margin-bottom: 6px;
+  color: #f7a600;
+  overflow-wrap: anywhere;
+}
+
+.xync-note:empty {
+  display: none;
+}
+
+.xync-actions {
+  display: flex;
+  gap: 6px;
+}
