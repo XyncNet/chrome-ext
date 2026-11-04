@@ -1,6 +1,6 @@
 # Privacy Policy — Xync Agent Setter
 
-_Last updated: 2026-06-29_
+_Last updated: 2026-11-04_
 
 Xync Agent Setter ("the Extension") is for Xync partners who want to grant the
 Xync bot temporary, authorized control of their own cryptocurrency exchange account
@@ -9,11 +9,12 @@ time. This policy explains what data the Extension handles and why.
 
 ## What the Extension does
 
-The Extension acts only when you click its toolbar button while signed in to a
-supported exchange. On that click it reads the data needed to authenticate you to
-Xync and submits it to the Xync backend. It does nothing else in the background
-beyond detecting which exchange tab is active and, on HTX, capturing the signed
-profile request that your own browser makes (see Permissions below).
+The Extension sets up your agent only when you click its toolbar button while
+signed in to a supported exchange. On that click it reads the data needed to
+authenticate you to Xync and submits it to the Xync backend. Beyond that click it
+detects which exchange tab is active, on HTX captures the signed profile request
+that your own browser makes (see Permissions below), and on Bybit's USDT/RUB P2P
+pages shows Xync's parsed ad conditions under the ads (see below).
 
 ## Data we process
 
@@ -29,12 +30,17 @@ reads and transmits:
   the Extension shows fields for your API key, API secret and 2FA secret. These
   are included only when you type them in.
 
+On Bybit's USDT/RUB P2P pages, without any click, the Extension reads the ad list
+the page itself loads and sends the IDs of the listed ads — public data of other
+users' ads, nothing about you or your account — to
+`https://api.xync.net/public/ad-tags`, and displays the reply on the page.
+
 ## How the data is used
 
-All of the above is sent in a single HTTPS request to
+The authentication and profile data above is sent in a single HTTPS request to
 `https://api.xync.net/public/set-agent` for the sole purpose of establishing and
-maintaining your agent relationship on Xync. The Extension uses the data for no
-other purpose.
+maintaining your agent relationship on Xync. Ad IDs are sent only to get the parsed
+conditions of those ads. The Extension uses the data for no other purpose.
 
 ## What we do NOT do
 
@@ -56,7 +62,8 @@ backend is handled under the Xync platform's own terms and privacy policy.
 ## Permissions and why we need them
 
 - **Host access to the exchanges / `activeTab`** — to read the active tab and the
-  cookies needed to authenticate you.
+  cookies needed to authenticate you, and on Bybit's P2P pages to read the listed
+  ads and show their parsed conditions.
 - **`cookies`** — to read the session cookies listed above.
 - **`webRequest`** — read-only, to capture the `Vtoken` signing header from HTX's
   own request to its profile API. The Extension never blocks or modifies any request.

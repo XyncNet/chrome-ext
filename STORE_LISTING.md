@@ -33,10 +33,11 @@ How it works:
 4. If Xync needs API credentials (API key / secret / 2FA), it prompts you to enter
    them and submit again.
 
-The extension only runs when you click it, only works on Bybit and HTX, and sends
-data solely to api.xync.net to set up your agent. It collects no browsing history
-and does nothing in the background on other sites. See the privacy policy for full
-details.
+Agent setup only runs when you click the extension. It only works on Bybit and HTX
+and sends data solely to api.xync.net. On Bybit's USDT/RUB P2P pages it also shows
+Xync's parsed ad conditions under the ads, sending only the listed ads' IDs. It
+collects no browsing history and does nothing in the background on other sites. See
+the privacy policy for full details.
 
 ## Single purpose
 
@@ -58,7 +59,8 @@ to the Xync backend to establish a time-limited agent relationship.
   `chrome.storage.session` (in-memory) between page load and the user's click.
 - **Host permissions** (`www.bybit.com`, `www.htx.com`, `api.xync.net`) — Read
   cookies/profile from the two supported exchanges and POST the result to the Xync
-  backend. No broad `<all_urls>` access is requested.
+  backend; on Bybit's P2P pages read the listed ads and show their parsed conditions.
+  No broad `<all_urls>` access is requested.
 
 ## Remote code
 

@@ -1,0 +1,19 @@
+.xync-tags {
+  grid-column: 1 / -1;
+  font: 11px/1.5 system-ui, sans-serif;
+  text-align: left;
+}
+
+div.xync-tags,
+.xync-tags td {
+  padding: 2px 8px 6px;
+}
+
+.xync-tags span {
+  display: inline-block;
+  margin: 0 4px 2px 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  color: #f7a600;
+  background: rgba(247, 166, 0, 0.14);
+}
