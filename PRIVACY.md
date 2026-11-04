@@ -38,7 +38,7 @@ and displays the reply on the page. With a filter on, it loads the full ad list 
 your Bybit session the way the page does, sends those IDs and the filter you chose to
 the same address, and shows the matching ads in the page's own list.
 
-This needs you to sign in to Xync via Telegram from the page. The Extension then keeps
+This needs you to sign in to Xync via Telegram from the Extension's popup. The Extension then keeps
 your Xync login token on your device and sends it with these requests. The filter you
 chose is kept on your device too.
 

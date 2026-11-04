@@ -1,18 +1,33 @@
 // On Bybit's USDT/RUB P2P pages: under each ad whose condition Xync has parsed, shows the
-// parse as compact tags, and in a floating widget filters the listing by that parse.
+// parse as compact tags, and keeps the filter set in the popup (filter.js).
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
+// The outcome goes on the extension's badge: "kept/all" of a filter, "!" on an error, whose
+// text the popup shows. An error stays till the page reloads.
 (() => {
   const BOX = 'xync-tags';
   const NO_LIMITS = 'разобрано: без ограничений';
   const FILTER = 'xyncFilter'; // localStorage, hook.js reads it at request time
-  const BOT = 'XyncPayBot';
+  const NO_LOGIN = 'Нужен вход в Xync';
+  const saved = JSON.parse(localStorage.getItem(FILTER));
 
   let ads = []; // current listing in page order: [{id, nick, tags}]
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
+  let on = false; // a USDT/RUB P2P page: Bybit changes the currency without a page load
+  let count = ''; // what the filter kept
+  let error = '';
 
-  const api = (path, body) => chrome.runtime.sendMessage({ path, body });
+  const badge = () => chrome.runtime.sendMessage({ badge: !on ? '' : error ? '!' : count });
+  function report(text) {
+    error = text;
+    badge();
+  }
+  async function api(path, body) {
+    const res = await chrome.runtime.sendMessage({ path, body });
+    if (res.error) report(res.status === 401 ? NO_LOGIN : res.error);
+    return res;
+  }
   const norm = (s) => s.replace(/\s+/g, ' ').trim();
   const el = (tag, className = '', textContent = '') =>
     Object.assign(document.createElement(tag), { className, textContent });
@@ -80,145 +95,46 @@
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
-  // The filter widget. A filter change reloads the page: its list can't be re-requested from
-  // outside, and hook.js applies the saved filter to whatever the page requests next.
-  const saved = (() => {
-    try {
-      return JSON.parse(localStorage.getItem(FILTER));
-    } catch {
-      return null;
-    }
-  })();
-  const draft = saved ?? { only: {}, skip: {} };
-  const picked = saved ? [...Object.values(saved.only), ...Object.values(saved.skip)].flat().length : 0;
-
-  const root = el('div', 'xync-filter');
-  const panel = root.appendChild(el('div', 'xync-panel'));
-  panel.hidden = true;
-  const hint = 'Клик: только → кроме → выкл. С фильтром видны лишь разобранные объявы.';
-  panel.appendChild(el('div', 'xync-hint', hint));
-  const groups = panel.appendChild(el('div'));
-  const note = panel.appendChild(el('div', 'xync-note'));
-  const actions = panel.appendChild(el('div', 'xync-actions'));
-  const apply = actions.appendChild(el('button', '', 'Применить'));
-  const reset = actions.appendChild(el('button', '', 'Сбросить'));
-  const toggle = root.appendChild(el('button', '', picked ? `Xync-фильтр: ${picked}` : 'Xync-фильтр'));
-
-  let options = null;
-  let loggedOut = false;
-
-  const stateOf = (field, val) =>
-    draft.only[field]?.includes(val) ? 'only' : draft.skip[field]?.includes(val) ? 'skip' : '';
-
-  function cycle(field, val) {
-    const state = stateOf(field, val);
-    if (state) {
-      draft[state][field] = draft[state][field].filter((v) => v !== val);
-      if (!draft[state][field].length) delete draft[state][field];
-    }
-    const next = { '': 'only', only: 'skip', skip: '' }[state];
-    if (next) (draft[next][field] ||= []).push(val);
-  }
-
-  async function openPanel() {
-    panel.hidden = false;
-    if (options) return;
-    note.textContent = 'Загружаю варианты…';
-    const { data, error, status } = await api(`/ext/cond-filters?host=${location.host}`);
-    if (status === 401) return toLogin();
-    note.textContent = error ?? '';
-    if (error) return;
-    options = data;
-    for (const [field, vals] of Object.entries(options)) {
-      const group = groups.appendChild(el('div', 'xync-group'));
-      group.appendChild(el('b', '', field));
-      for (const val of vals) {
-        const chip = group.appendChild(el('span', stateOf(field, val), val));
-        chip.onclick = () => {
-          cycle(field, val);
-          chip.className = stateOf(field, val);
-        };
-      }
-    }
-  }
-
-  function toLogin() {
-    loggedOut = true;
-    panel.hidden = true;
-    toggle.textContent = 'Xync: войти через Telegram';
-  }
-
-  async function login() {
-    toggle.disabled = true;
-    toggle.textContent = 'Подтвердите вход в Telegram…';
-    const start = await api('/auth/tg-start', {});
-    if (start.error) return failLogin(start.error);
-    window.open(`https://t.me/${BOT}?start=login_${start.data.token}`, '_blank');
-    for (;;) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const { data, error } = await api(`/auth/tg-poll?token=${start.data.token}`);
-      if (error) return failLogin(error);
-      if (data.ready !== false) return location.reload(); // background.js has kept the token
-    }
-  }
-
-  function failLogin(error) {
-    toggle.disabled = false;
-    toggle.textContent = `Вход не удался, ещё раз. ${error}`;
-  }
-
-  async function report(error) {
-    toggle.disabled = false;
-    toggle.textContent = 'Xync-фильтр: не применён';
-    await openPanel();
-    note.textContent = error;
-  }
-
-  toggle.onclick = () => {
-    if (loggedOut) return login();
-    if (panel.hidden) openPanel();
-    else panel.hidden = true;
-  };
-  apply.onclick = () => {
-    const empty = !Object.keys(draft.only).length && !Object.keys(draft.skip).length;
-    if (empty) localStorage.removeItem(FILTER);
-    else localStorage.setItem(FILTER, JSON.stringify(draft));
-    location.reload();
-  };
-  reset.onclick = () => {
-    localStorage.removeItem(FILTER);
-    location.reload();
-  };
-
   async function listed(list) {
     const me = ++listing;
-    root.hidden = !list;
-    if (list && !root.isConnected) document.body.appendChild(root);
+    on = !!list;
+    badge();
     const ids = list?.map((a) => a.id) ?? [];
-    const { data = {}, error, status } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids }) : {};
+    const { data = {} } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids }) : {};
     if (me !== listing) return;
-    if (status === 401) toLogin();
-    const tags = (a) => (status === 401 ? undefined : error ? [error] : data[a.id]);
-    ads = (list ?? []).map((a) => ({ id: a.id, nick: norm(a.nick), tags: tags(a) }));
+    ads = (list ?? []).map((a) => ({ id: a.id, nick: norm(a.nick), tags: data[a.id] }));
     render();
   }
 
   async function filter({ xyncBook, ids }) {
-    if (!root.isConnected) document.body.appendChild(root);
-    toggle.disabled = true;
-    toggle.textContent = 'Xync-фильтр: подбираю…';
-    const { data, error, status } = await api('/ext/ad-tags', { host: location.host, ids, ...saved });
+    on = true;
+    count = '…';
+    badge();
+    const { data } = await api('/ext/ad-tags', { host: location.host, ids, ...saved });
     window.postMessage({ xyncKept: xyncBook, ids: data ? Object.keys(data) : null }, location.origin);
-    toggle.disabled = false;
-    if (status === 401) return toLogin();
-    if (error) return report(error);
-    toggle.textContent = `Xync-фильтр: ${Object.keys(data).length} из ${ids.length}`;
+    count = data ? `${Object.keys(data).length}/${ids.length}` : '';
+    badge();
   }
 
   window.addEventListener('message', ({ source, data }) => {
     if (source !== window || !data) return;
     if (data.xyncAds !== undefined) listed(data.xyncAds);
     if (data.xyncBook) filter(data);
-    if (data.xyncFail && !loggedOut) report(data.xyncFail);
+    if (data.xyncFail) report(data.xyncFail);
+  });
+
+  // The popup asks for the state or sets a new filter: a change reloads the page, as its list
+  // can't be re-requested from outside, and hook.js applies the filter to what it requests next.
+  // background.js sends the login's error here.
+  chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
+    if (msg.error) report(msg.error);
+    else if (!msg.filter) reply({ on, filter: saved, error, count });
+    else {
+      const { only, skip } = msg.filter;
+      if (Object.keys({ ...only, ...skip }).length) localStorage.setItem(FILTER, JSON.stringify(msg.filter));
+      else localStorage.removeItem(FILTER);
+      reply();
+      location.reload();
+    }
   });
 })();

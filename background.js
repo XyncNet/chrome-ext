@@ -55,9 +55,10 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders', 'extraHeaders']
 );
 
-// Xync API for content.js: bound by the page's CORS, it can't reach api.xync.net itself, this
-// worker can (host_permissions). The login's token comes in the `Authorization` response
-// header and is kept here for good: the backend renews an expired one by itself.
+// Xync API for content.js and the popup: bound by the page's CORS, content.js can't reach
+// api.xync.net itself, this worker can (host_permissions). The login's token comes in the
+// `Authorization` response header and is kept here for good: the backend renews an expired
+// one by itself.
 async function api({ path, body }) {
   const { token } = await chrome.storage.local.get('token');
   const headers = { ...(token && { Authorization: token }), ...(body && { 'content-type': 'application/json' }) };
@@ -73,7 +74,31 @@ async function api({ path, body }) {
   }
 }
 
-chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
-  api(msg).then(reply);
-  return true; // the reply is async
+// The popup closes as soon as Telegram takes the focus, so the login waits here, and a click
+// on the login again replaces the one that's waiting. `tabId`: the page to reload once in.
+const BOT = 'XyncPayBot';
+let logins = 0;
+
+async function login(tabId) {
+  const me = ++logins;
+  const fail = (error) => chrome.tabs.sendMessage(tabId, { error }).catch(() => {}); // tab's gone: nowhere to show
+  const start = await api({ path: '/auth/tg-start', body: {} });
+  if (start.error) return fail(start.error);
+  chrome.tabs.create({ url: `https://t.me/${BOT}?start=login_${start.data.token}` });
+  for (;;) {
+    await new Promise((r) => setTimeout(r, 2000));
+    if (me !== logins) return;
+    const { data, error } = await api({ path: `/auth/tg-poll?token=${start.data.token}` });
+    if (error) return fail(error);
+    if (data.ready !== false) return chrome.tabs.reload(tabId);
+  }
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if ('badge' in msg) chrome.action.setBadgeText({ tabId: sender.tab.id, text: msg.badge });
+  else if (msg.login) login(msg.login);
+  else {
+    api(msg).then(reply);
+    return true; // the reply is async
+  }
 });
