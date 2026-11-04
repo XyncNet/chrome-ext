@@ -7,6 +7,7 @@
   const PAGE = /^\/[^/]+\/p2p\/(buy|sell)\/USDT\/RUB\b/;
   const FILTER = 'xyncFilter'; // localStorage: set by content.js, readable here synchronously
   const BOOK_MAX = 500; // as many as the backend loads: further ads have no parse anyway
+  const BOOK_SIZE = '20'; // the backend's page too: above its cap Bybit refuses the request
   const BOOK_TTL = 60000; // page turns and the page's refreshes reuse the filtered book
 
   const pageFetch = window.fetch;
@@ -24,15 +25,14 @@
   // The whole listing under the page's own request, by its session and headers.
   async function book(url, headers, req) {
     const items = [];
-    for (let page = 1, size = BOOK_MAX; ; page++) {
-      const body = JSON.stringify({ ...req, page: String(page), size: String(size) });
+    for (let page = 1; ; page++) {
+      const body = JSON.stringify({ ...req, page: String(page), size: BOOK_SIZE });
       const res = await pageFetch(url, { method: 'POST', headers, body, credentials: 'include' });
       if (!res.ok) throw new Error(`Bybit ${res.status}`);
       const { result, ret_msg } = await res.json();
       if (!result?.items) throw new Error(`Bybit: ${ret_msg}`);
       items.push(...result.items);
       if (!result.items.length || items.length >= Math.min(result.count, BOOK_MAX)) return items;
-      size = result.items.length; // Bybit capped the size: go on by pages of what it gave
     }
   }
 
