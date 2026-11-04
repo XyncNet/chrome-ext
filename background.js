@@ -55,6 +55,67 @@ chrome.webRequest.onBeforeSendHeaders.addListener(
   ['requestHeaders', 'extraHeaders']
 );
 
+// What Bybit's P2P listing, cut down by content.css, has no use for: not to load it at all.
+// Chrome can't match the page's address, so the rules go by tab, and only on requests of Bybit:
+// in the same tab on another site they would break its Google login. The rest of Bybit keeps
+// its support and popups. Never here: Akamai (/akam and the long random path), finger_device.js,
+// t1.js, turingfraud, compliance and anti-phishing are what login and orders rely on; data-core
+// and the A/B results too: the page calls the former directly, the latter picks its variant.
+const LISTING = /^https:\/\/www\.bybit\.com\/[^/]+\/p2p\/(buy|sell)\//;
+const CUT = [
+  // trackers
+  '||googletagmanager.com^',
+  '||analytics.tiktok.com^',
+  '||tiktokw.us^',
+  '||appsflyersdk.com^',
+  '||onelink.me^',
+  '||sc-datasink.',
+  '||monitor-frontend-collector.',
+  '/x-api/data/trace/report',
+  // support
+  '/static/by-globals/globals.ada.',
+  '/static/fe-lib-user-security/ada.',
+  '/common-static/cht-static/custom-service-svc/',
+  // popups and the Notice dialog: the activity list is what brings it and the banners
+  '/x-api/fiat/otc/configuration/activity/list',
+  '/x-api/v3/private/popup/config/list',
+  '/static/by-globals/globals.campaign.',
+  '/static/fe-lib-user-security/campaign.',
+  '/static/by-globals/globals.globalPopup.',
+  '/static/fe-lib-ujtools/',
+  '||pup-resource.',
+  // Google's login prompt and web push
+  '||accounts.google.com/gsi/',
+  '/static/by-globals/globals.googleOneTap.',
+  '/static/fe-lib-login/googleOneTap.',
+  '/static/by-globals/globals.webPush.',
+  // the blocks content.css hides: footer, "Recommended", FAQ, coupon banner
+  '/static/by-globals/globals.navFooter.',
+  '/static/fe-lib-footer/',
+  '/x-api/fiat/otc/item/recommend/online',
+  '/x-api/fiat/public/channel/faq-list',
+  '/x-api/fiat/otc/user/unlogin/deduction',
+];
+
+async function cut(tabId, on) {
+  const rules = await chrome.declarativeNetRequest.getSessionRules();
+  const tabs = new Set(rules[0]?.condition.tabIds);
+  tabs[on ? 'add' : 'delete'](tabId);
+  const condition = { tabIds: [...tabs], initiatorDomains: ['www.bybit.com'] };
+  await chrome.declarativeNetRequest.updateSessionRules({
+    removeRuleIds: rules.map((r) => r.id),
+    addRules: tabs.size
+      ? CUT.map((urlFilter, i) => ({ id: i + 1, action: { type: 'block' }, condition: { ...condition, urlFilter } }))
+      : [],
+  });
+}
+
+// Every full page load of Bybit: moves within the listing's app don't need the rules changed.
+chrome.webRequest.onBeforeRequest.addListener(({ tabId, url }) => void cut(tabId, LISTING.test(url)), {
+  urls: ['https://www.bybit.com/*'],
+  types: ['main_frame'],
+});
+
 // Xync API for content.js and the popup: bound by the page's CORS, content.js can't reach
 // api.xync.net itself, this worker can (host_permissions). The login's token comes in the
 // `Authorization` response header and is kept here for good: the backend renews an expired

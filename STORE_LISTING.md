@@ -55,7 +55,13 @@ to the Xync backend to establish a time-limited agent relationship.
   `deviceId` on Bybit; `HB_SSO` on HTX) required to authenticate them to Xync.
 - **webRequest** — Read-only observation of the user's own HTX requests to capture
   the per-session `Vtoken` signing header that HTX adds to its OTC profile call,
-  which the extension cannot reproduce. No requests are blocked or modified.
+  which the extension cannot reproduce, and of main-frame loads of `www.bybit.com`
+  to tell which tab is on the P2P ad list. No requests are blocked or modified
+  through it.
+- **declarativeNetRequest** — Block a fixed list of requests of Bybit's P2P ad list
+  page, in that tab only, for requests initiated by Bybit: trackers, popups, the
+  support widget and the data of the blocks the extension hides there. Session rules
+  built in; nothing is read, redirected or sent anywhere.
 - **storage** — Hold the captured HTX request (method/headers/body) in
   `chrome.storage.session` (in-memory) between page load and the user's click, and
   the user's Xync login token in `chrome.storage.local`.

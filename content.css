@@ -1,5 +1,6 @@
 /* The P2P listing cut down to the filter, the ads and the pager, under Bybit's header and P2P
-   menu. An allow-list where Bybit's banners differ with the login, so unseen ones go too. */
+   menu. An allow-list where Bybit's banners differ with the login, so unseen ones go too. Most
+   of what's hidden isn't even loaded (CUT in background.js), this is for what gets through. */
 .trade-list > :not(.trade-list__main),
 .trade-list__main > :not(.trade-list__wrapper, .p2p-home__skeleton),
 .security-notice__announcement,
@@ -7,7 +8,10 @@
 tr.new-user-ads,
 thead .moly-tag,
 .moly-popover-highlight.moly-popover-show-close,
-#__by_uniframe_footer__ {
+.fiat-otc__ad-modal,
+.moly-dialog-shadow:has(+ .fiat-otc__ad-modal),
+body:has(.trade-list) #__by_uniframe_footer__,
+body:has(.trade-list) #__uniframe_ada_container {
   display: none !important;
 }
 

@@ -15,7 +15,9 @@ authenticate you to Xync and submits it to the Xync backend. Beyond that click i
 detects which exchange tab is active, on HTX captures the signed profile request
 that your own browser makes (see Permissions below), and on Bybit's USDT/RUB P2P
 pages shows Xync's parsed ad conditions under the ads and filters the ads by them,
-for users signed in to Xync (see below).
+for users signed in to Xync (see below). On Bybit's P2P ad list it also hides the
+page's banners, footer and support button, and stops that page's trackers and popups
+from loading.
 
 ## Data we process
 
@@ -76,7 +78,13 @@ backend is handled under the Xync platform's own terms and privacy policy.
   ads and show their parsed conditions.
 - **`cookies`** — to read the session cookies listed above.
 - **`webRequest`** — read-only, to capture the `Vtoken` signing header from HTX's
-  own request to its profile API. The Extension never blocks or modifies any request.
+  own request to its profile API, and to notice that a tab has opened Bybit's P2P ad
+  list. Nothing is blocked or modified through it.
+- **`declarativeNetRequest`** — to block a fixed list of requests made by Bybit's P2P
+  ad list page, in that tab only: analytics and advertising trackers, popups, the
+  support widget and the data of the blocks it hides. Chrome applies the list itself:
+  the Extension doesn't read those requests, and sends nothing about them anywhere.
+  Bybit's security checks are not blocked.
 - **`storage`** — to hold the captured HTX request in memory between page load and
   your click, and your Xync login token.
 
