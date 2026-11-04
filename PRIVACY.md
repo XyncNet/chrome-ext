@@ -36,11 +36,12 @@ reads and transmits:
 On Bybit's USDT/RUB P2P pages, without any click, the Extension reads the ad list
 the page itself loads and sends the IDs of the listed ads — public data of other
 users' ads, nothing about your exchange account — to `https://api.xync.net/ext/ad-tags`,
-and displays the reply on the page. With a filter on, it loads the full ad list with
+and displays the reply on the page. A button you click on an ad sends that ad's ID to
+`https://api.xync.net/ext/ad-parse` or `/ext/ad-load`. With a filter on, it loads the full ad list with
 your Bybit session the way the page does, sends those IDs and the filter you chose to
 the same address, and shows the matching ads in the page's own list.
 
-This needs you to sign in to Xync via Telegram from the Extension's popup. The Extension then keeps
+This needs you to sign in to Xync via Telegram from the Extension's side panel. The Extension then keeps
 your Xync login token on your device and sends it with these requests. The filter you
 chose is kept on your device too.
 

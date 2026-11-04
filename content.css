@@ -21,17 +21,37 @@ body:has(.trade-list) #__uniframe_ada_container {
   visibility: visible !important;
 }
 
-.xync-tags {
-  grid-column: 1 / -1;
-  font: 600 13px/1.5 system-ui, sans-serif;
+/* Room for the side panel: Bybit's list is 1200 wide in any window, and its button goes first. */
+#root:has(.trade-list) {
+  min-width: 0 !important;
 }
 
-/* Tags are a part of the ad above them: closer to it, with Bybit's divider under them, not
-   between. !important: its table rules are the more specific and align the only cell right. */
-div.xync-tags,
-.xync-tags td {
-  padding: 0 0 16px !important;
+.trade-list__main {
+  width: min(1200px, 100% - 32px) !important;
+}
+
+/* The columns made to fit what's under the ads: Bybit gives the most to the limits and the least
+   to the payment, the busiest of them. */
+table:has(.xync-tags) :is(th, td):nth-child(1) { width: 24% !important; }
+table:has(.xync-tags) :is(th, td):nth-child(2) { width: 16% !important; min-width: 0 !important; }
+table:has(.xync-tags) :is(th, td):nth-child(3) { width: 19% !important; min-width: 0 !important; }
+table:has(.xync-tags) :is(th, td):nth-child(4) { width: 22% !important; }
+
+.xync-tags {
+  grid-column: 1 / -1;
+  font: 600 12px/22px system-ui, sans-serif;
+}
+
+/* A part of the ad above: closer to it, with Bybit's divider under it, not between. !important:
+   its table rules are the more specific and align the last cell right. */
+.xync-tags > * {
+  padding: 0 12px 14px 0 !important;
   text-align: left !important;
+  vertical-align: top !important;
+}
+
+.xync-tags > :last-child {
+  padding-right: 0 !important;
 }
 
 tr:has(+ .xync-tags) td {
@@ -42,19 +62,84 @@ tr:has(+ .xync-tags)::after {
   display: none !important;
 }
 
+/* Slots: a fixed grid of two lines, so a field keeps its place in every ad. width 0: however long
+   the text, it doesn't get to move Bybit's columns. */
+.xync-tags > * > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: 22px 22px;
+  gap: 3px 4px;
+  width: 0;
+  min-width: 100%;
+}
+
+.xync-tags > :nth-child(2) > div {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.xync-tags > :nth-child(4) > div {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.xync-tags [data-field='banks'] {
+  grid-column: span 2;
+}
+
+.xync-tags [data-field='fix_amounts'] {
+  grid-column: 1 / -1;
+}
+
 .xync-tags span {
-  display: inline-block;
-  margin: 0 4px 4px 0;
-  padding: 1px 7px;
+  justify-self: start;
+  max-width: 100%;
+  padding: 0 6px;
+  overflow: hidden;
   border-radius: 4px;
   color: #fff;
   background: #64748b;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.xync-tags span:empty {
+  visibility: hidden;
+}
+
+/* Under the price: it's the one column with room to spare. */
+.xync-tags .status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: #81858c;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.xync-tags .status button {
+  padding: 0 7px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  color: #2563eb;
+  background: none;
+  font: 600 12px/20px system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.xync-tags .status button:disabled {
+  color: #81858c;
+  cursor: wait;
+}
+
+.xync-tags .status b {
+  overflow: hidden;
+  color: #dc2626;
+  text-overflow: ellipsis;
 }
 
 /* A color per parsed field, the same in every ad; paired fields share a hue. Solid, so a tag
    reads alike on Bybit's light and dark themes. */
 .xync-tags [data-field='banks'] { background: #1d4ed8; }
-.xync-tags [data-field='bank_side'] { color: #111; background: #93c5fd; }
 .xync-tags [data-field='cash_cities'] { background: #0f766e; }
 .xync-tags [data-field='from_party'] { background: #7c3aed; }
 .xync-tags [data-field='to_party'] { color: #111; background: #c4b5fd; }

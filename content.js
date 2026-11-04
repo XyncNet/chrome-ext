@@ -1,24 +1,37 @@
-// On Bybit's USDT/RUB P2P pages: under each ad whose condition Xync has parsed, shows the
-// parse as compact tags, and keeps the filter set in the popup (filter.js).
+// On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
+// parsed field in a place of its own, with a button to get what's missing, and keeps the filter
+// set in the panel (filter.js).
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
-// text the popup shows. An error stays till the page reloads.
+// text the panel shows. An error stays till the page reloads.
 (() => {
   const BOX = 'xync-tags';
-  const NO_LIMITS = 'разобрано: без ограничений';
   const FILTER = 'xyncFilter'; // localStorage, hook.js reads it at request time
   const NO_LOGIN = 'Нужен вход в Xync';
+  const FRESH = 300; // s: a parse this young isn't offered again
+  const STATUS = 'status';
+  // The ad's parse under the ad, in Bybit's columns, by the question each answers: who's the
+  // maker | is the price what it seems | what sum | how to pay | what's asked of the buyer. A
+  // field's place is its slot here, taken even with nothing in it, so it's the same in every ad.
+  const COLUMNS = [
+    ['is_intermediary', 'intermed_forbid', 'contact', 'mtl_like'],
+    ['abuser', STATUS],
+    ['scale', 'ppo', 'fix_amounts'],
+    ['banks', 'cash_cities', 'from_party', 'to_party', 'trans_type'],
+    ['slip', 'lk', 'cred', 'slavic'],
+  ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
-  let ads = []; // current listing in page order: [{id, nick, tags}]
+  let ads = []; // current listing in page order: [{id, nick, known, tags, at, busy, err}]
+  let latest = null; // the same as hook.js gave it
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
   let on = false; // a USDT/RUB P2P page: Bybit changes the currency without a page load
   let count = ''; // what the filter kept
   let error = '';
 
-  // Only about 4 characters fit on the badge: "14/500" would read "4/50", the popup has it all.
+  // Only about 4 characters fit on the badge: "14/500" would read "4/50", the panel has it all.
   const badge = () => chrome.runtime.sendMessage({ badge: !on ? '' : error ? '!' : count.split('/')[0] });
   function report(text) {
     error = text;
@@ -75,14 +88,63 @@
     return res;
   }
 
-  // A sibling of the row, not its child: full width whatever the row's own layout is.
-  function box(row, tags) {
+  function ago(sec) {
+    const min = Math.floor(sec / 60);
+    if (min < 60) return min ? `${min} мин назад` : 'только что';
+    return min < 1440 ? `${Math.floor(min / 60)} ч назад` : `${Math.floor(min / 1440)} дн назад`;
+  }
+
+  // Asks for the ad's parse or for the ad itself, then asks about the whole listing again: a
+  // parse is its condition's, other ads of the page may share it. What it's doing lives in the
+  // ad, not in the button: the page may rebuild the rows any moment.
+  async function act(ad, path) {
+    ad.busy = true;
+    ad.err = '';
+    render();
+    const { error } = await api(path, { host: location.host, id: ad.id });
+    ad.busy = false;
+    ad.err = error;
+    if (error) return render();
+    report('');
+    listed(latest);
+  }
+
+  // Where the ad's parse stands, and the way forward: unknown ad → load, not parsed → parse,
+  // parsed long ago → parse again. No condition at all: nothing to do.
+  function status(ad) {
+    const res = el('div', STATUS);
+    const age = Date.now() / 1000 - ad.at;
+    if (ad.at) res.appendChild(el('time', '', ago(age))).title = `Разобрано ${new Date(ad.at * 1000).toLocaleString()}`;
+    else if (ad.known && ad.tags) res.append('нет условия');
+    const action = !ad.known
+      ? ['🔄', '/ext/ad-load']
+      : ad.tags === null
+        ? ['Parse', '/ext/ad-parse']
+        : ad.at && age > FRESH && ['ReParse', '/ext/ad-parse'];
+    if (action) {
+      const button = res.appendChild(el('button', '', ad.busy ? '…' : action[0]));
+      button.disabled = ad.busy;
+      button.onclick = () => act(ad, action[1]);
+    }
+    if (ad.err) res.appendChild(el('b', '', ad.err)).title = ad.err;
+    return res;
+  }
+
+  // A sibling of the row, not its child: the page owns the row and re-renders it at will.
+  function box(row, ad) {
     const isTr = row.tagName === 'TR';
     const res = el(isTr ? 'tr' : 'div', BOX);
-    const wrap = isTr ? res.appendChild(el('td')) : res;
-    if (isTr) wrap.colSpan = row.cells.length;
-    for (const tag of tags.length ? tags : [NO_LIMITS])
-      wrap.appendChild(el('span', '', tag)).dataset.field = tag.split(':')[0]; // "field: value", colored by field
+    for (const fields of COLUMNS) {
+      const slots = res.appendChild(el(isTr ? 'td' : 'div')).appendChild(el('div'));
+      for (const field of fields) {
+        if (field === STATUS) slots.append(status(ad));
+        else {
+          const slot = slots.appendChild(el('span', '', ad.tags?.[field]));
+          slot.dataset.field = field;
+          slot.title = slot.textContent;
+        }
+      }
+    }
     return res;
   }
 
@@ -97,18 +159,20 @@
     observer.disconnect(); // our own writes must not wake it
     for (const old of document.querySelectorAll(`.${BOX}`)) old.remove();
     if (!ads.length) return;
-    for (const [row, ad] of placed()) if (ad.tags) row.after(box(row, ad.tags));
+    for (const [row, ad] of placed()) row.after(box(row, ad));
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 
   async function listed(list) {
     const me = ++listing;
+    latest = list;
     on = !!list;
     badge();
     const ids = list?.map((a) => a.id) ?? [];
-    const { data = {} } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids }) : {};
+    const { data } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids }) : {};
     if (me !== listing) return;
-    ads = (list ?? []).map((a) => ({ id: a.id, nick: norm(a.nick), tags: data[a.id] }));
+    // No reply is no news of these ads, not that the backend doesn't know them.
+    ads = data ? list.map((a) => ({ id: a.id, nick: norm(a.nick), known: a.id in data, ...data[a.id] })) : [];
     render();
   }
 
@@ -129,12 +193,14 @@
     if (data.xyncFail) report(data.xyncFail);
   });
 
-  // The popup asks for the state or sets a new filter: a change reloads the page, as its list
+  // Ages grow with no change on the page.
+  setInterval(render, 60000);
+
+  // The panel asks for the state or sets a new filter: a change reloads the page, as its list
   // can't be re-requested from outside, and hook.js applies the filter to what it requests next.
-  // background.js sends the login's error here.
   chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
-    if (msg.error) report(msg.error);
-    else if (!msg.filter) reply({ on, filter: saved, error, count });
+    if ('badge' in msg) return; // for the panel, the listener is any page's
+    if (!msg.filter) reply({ on, filter: saved, error, count });
     else {
       const { only, skip } = msg.filter;
       if (Object.keys({ ...only, ...skip }).length) localStorage.setItem(FILTER, JSON.stringify(msg.filter));

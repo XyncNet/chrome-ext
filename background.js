@@ -16,6 +16,10 @@ function updateIcon(tabId, url) {
 // Disable by default for all tabs
 chrome.action.disable();
 
+// The icon opens the side panel: unlike a popup it stays when the focus leaves for Telegram or a
+// page, so what's being done in it needs no help from this worker.
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
+
 // When a tab is updated (navigated)
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === 'complete') {
@@ -32,7 +36,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 // HTX signs its OTC API calls with several per-session headers (Vtoken, AppId,
 // sign, nonce, ...) that the page's own JS generates and we can't reproduce. So
 // instead of rebuilding the request we capture the page's real user/info call —
-// method, headers and body — and let the popup replay it verbatim.
+// method, headers and body — and let the panel replay it verbatim.
 const HTX_USERINFO = 'https://www.htx.com/-/x/otc/v1/user/info';
 
 chrome.webRequest.onBeforeRequest.addListener(
@@ -116,7 +120,7 @@ chrome.webRequest.onBeforeRequest.addListener(({ tabId, url }) => void cut(tabId
   types: ['main_frame'],
 });
 
-// Xync API for content.js and the popup: bound by the page's CORS, content.js can't reach
+// Xync API for content.js and the panel: bound by the page's CORS, content.js can't reach
 // api.xync.net itself, this worker can (host_permissions). The login's token comes in the
 // `Authorization` response header and is kept here for good: the backend renews an expired
 // one by itself.
@@ -129,35 +133,14 @@ async function api({ path, body }) {
     const auth = res.headers.get('authorization');
     if (auth) await chrome.storage.local.set({ token: auth });
     const text = await res.text();
-    return res.ok ? { data: JSON.parse(text) } : { status: res.status, error: `Xync ${res.status}: ${text}` };
+    return res.ok ? { data: text && JSON.parse(text) } : { status: res.status, error: `Xync ${res.status}: ${text}` };
   } catch (e) {
     return { error: `Xync: ${e.message}` };
   }
 }
 
-// The popup closes as soon as Telegram takes the focus, so the login waits here, and a click
-// on the login again replaces the one that's waiting. `tabId`: the page to reload once in.
-const BOT = 'XyncPayBot';
-let logins = 0;
-
-async function login(tabId) {
-  const me = ++logins;
-  const fail = (error) => chrome.tabs.sendMessage(tabId, { error }).catch(() => {}); // tab's gone: nowhere to show
-  const start = await api({ path: '/auth/tg-start', body: {} });
-  if (start.error) return fail(start.error);
-  chrome.tabs.create({ url: `https://t.me/${BOT}?start=login_${start.data.token}` });
-  for (;;) {
-    await new Promise((r) => setTimeout(r, 2000));
-    if (me !== logins) return;
-    const { data, error } = await api({ path: `/auth/tg-poll?token=${start.data.token}` });
-    if (error) return fail(error);
-    if (data.ready !== false) return chrome.tabs.reload(tabId);
-  }
-}
-
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if ('badge' in msg) chrome.action.setBadgeText({ tabId: sender.tab.id, text: msg.badge });
-  else if (msg.login) login(msg.login);
   else {
     api(msg).then(reply);
     return true; // the reply is async

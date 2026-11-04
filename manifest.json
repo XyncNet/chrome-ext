@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Xync Agent Setter",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "For Xync partners: grant the Xync bot temporary control over your own Bybit, HTX or MEXC exchange account.",
   "homepage_url": "https://xync.net",
   "minimum_chrome_version": "117",
-  "permissions": ["activeTab", "cookies", "webRequest", "storage", "declarativeNetRequest"],
+  "permissions": ["activeTab", "cookies", "webRequest", "storage", "declarativeNetRequest", "sidePanel"],
   "host_permissions": [
     "https://www.bybit.com/*",
     "https://www.htx.com/*",
@@ -13,7 +13,6 @@
     "https://api.xync.net/*"
   ],
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Xync Agent Setter",
     "default_icon": {
       "16": "ico/icon16.png",
@@ -21,6 +20,9 @@
       "48": "ico/icon48.png",
       "128": "ico/icon128.png"
     }
+  },
+  "side_panel": {
+    "default_path": "panel.html"
   },
   "background": {
     "service_worker": "background.js"

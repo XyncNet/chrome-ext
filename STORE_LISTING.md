@@ -62,6 +62,9 @@ to the Xync backend to establish a time-limited agent relationship.
   page, in that tab only, for requests initiated by Bybit: trackers, popups, the
   support widget and the data of the blocks the extension hides there. Session rules
   built in; nothing is read, redirected or sent anywhere.
+- **sidePanel** — The extension's interface lives in the browser's side panel, opened
+  by its icon: it stays open while the user signs in through Telegram and works on the
+  page.
 - **storage** — Hold the captured HTX request (method/headers/body) in
   `chrome.storage.session` (in-memory) between page load and the user's click, and
   the user's Xync login token in `chrome.storage.local`.

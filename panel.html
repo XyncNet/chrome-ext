@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { width: 300px; padding: 16px; font-family: system-ui, sans-serif; text-align: center; }
+    body { padding: 16px; font-family: system-ui, sans-serif; text-align: center; }
     button { padding: 10px 24px; font-size: 14px; cursor: pointer; border: none; border-radius: 6px; background: #4f46e5; color: #fff; }
     button:hover { background: #4338ca; }
     button:disabled { background: #a5b4fc; cursor: not-allowed; }
@@ -16,7 +16,7 @@
     #note { margin-bottom: 8px; color: #dc2626; overflow-wrap: anywhere; }
     #note:empty { display: none; }
     #hint { margin-bottom: 8px; color: #555; }
-    #groups { max-height: 340px; overflow: auto; margin-bottom: 8px; }
+    #groups { margin-bottom: 8px; }
     .group { margin-bottom: 6px; }
     .group b { display: block; }
     .group span { display: inline-block; margin: 2px 4px 0 0; padding: 0 6px; border-radius: 4px; background: #e5e7eb; cursor: pointer; user-select: none; }
@@ -25,20 +25,21 @@
   </style>
 </head>
 <body>
-  <button id="send">Send Token</button>
+  <div id="off" hidden>Откройте страницу Bybit, HTX или MEXC.</div>
+  <button id="send" hidden>Send Token</button>
   <div id="auth"></div>
   <div id="status"></div>
   <div id="xync" hidden>
     <div id="note"></div>
     <button id="login" hidden>Войти через Telegram</button>
-    <div id="panel" hidden>
-      <div id="hint">Клик: только → кроме → выкл. С фильтром видны лишь разобранные объявы.</div>
+    <div id="filter" hidden>
+      <div id="hint"><span id="count"></span>Клик: только → кроме → выкл. С фильтром видны лишь разобранные объявы.</div>
       <div id="groups"></div>
       <button id="apply">Применить</button>
       <button id="reset">Сбросить</button>
     </div>
   </div>
-  <script src="popup.js"></script>
+  <script src="panel.js"></script>
   <script src="filter.js"></script>
 </body>
 </html>
