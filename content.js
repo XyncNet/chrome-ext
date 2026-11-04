@@ -2,7 +2,7 @@
 // parse as compact tags, and keeps the filter set in the popup (filter.js).
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
-// The outcome goes on the extension's badge: "kept/all" of a filter, "!" on an error, whose
+// The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
 // text the popup shows. An error stays till the page reloads.
 (() => {
   const BOX = 'xync-tags';
@@ -18,7 +18,8 @@
   let count = ''; // what the filter kept
   let error = '';
 
-  const badge = () => chrome.runtime.sendMessage({ badge: !on ? '' : error ? '!' : count });
+  // Only about 4 characters fit on the badge: "14/500" would read "4/50", the popup has it all.
+  const badge = () => chrome.runtime.sendMessage({ badge: !on ? '' : error ? '!' : count.split('/')[0] });
   function report(text) {
     error = text;
     badge();

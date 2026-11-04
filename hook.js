@@ -6,8 +6,8 @@
   const ADS_URL = '/otc/item/online';
   const PAGE = /^\/[^/]+\/p2p\/(buy|sell)\/USDT\/RUB\b/;
   const FILTER = 'xyncFilter'; // localStorage: set by content.js, readable here synchronously
-  const BOOK_MAX = 500; // as many as the backend loads: further ads have no parse anyway
-  const BOOK_SIZE = '20'; // the backend's page too: above its cap Bybit refuses the request
+  const BOOK_MAX = 600; // 3 requests; the backend loads the first 500, further ads have no parse anyway
+  const BOOK_SIZE = '200'; // 300 passes, 400 is refused (912120002). The page waits for all of it: as few requests as can be
   const BOOK_TTL = 60000; // page turns and the page's refreshes reuse the filtered book
 
   const pageFetch = window.fetch;
