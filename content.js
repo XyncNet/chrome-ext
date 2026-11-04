@@ -38,7 +38,8 @@
     badge();
   }
   async function api(path, body) {
-    const res = await chrome.runtime.sendMessage({ path, body });
+    // Chrome ends a worker that's been waiting for 5 minutes: then there's no reply at all.
+    const res = await chrome.runtime.sendMessage({ path, body }).catch((e) => ({ error: `Xync: ${e.message}` }));
     if (res.error) report(res.status === 401 ? NO_LOGIN : res.error);
     return res;
   }
