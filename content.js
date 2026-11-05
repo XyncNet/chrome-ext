@@ -1,7 +1,7 @@
 // On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
 // parsed field in a place of its own, with a button to get what's missing, and keeps the filter
-// set in the panel (filter.js). An admin also sees the condition's id, fixes a tag by a click and
-// adds a field the parse has missed.
+// set in the panel (filter.js). An admin also sees the condition's id and text, reads the ad from
+// the exchange again, fixes a tag by a click and adds a field the parse has missed.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
@@ -26,7 +26,7 @@
   ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
-  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, busy, err}]
+  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, upd, txt, busy, err}]
   let latest = null; // the same as hook.js gave it
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
@@ -132,7 +132,24 @@
       button.disabled = ad.busy;
       button.onclick = () => act(ad, action[1]);
     }
-    if (ad.err) res.appendChild(el('b', '', ad.err)).title = ad.err;
+    if (ad.err && !ad.upd) res.appendChild(el('b', '', ad.err)).title = ad.err;
+    return res;
+  }
+
+  // The condition across Bybit's columns: reading the ad from the exchange again, how long ago that
+  // last was, and the text. An admin's: `upd` comes to them alone. Errors too, there's room here.
+  function source(row, ad) {
+    const isTr = row.tagName === 'TR';
+    const res = el(isTr ? 'tr' : 'div', `${BOX} source`);
+    const cell = res.appendChild(el(isTr ? 'td' : 'div'));
+    if (isTr) cell.colSpan = COLUMNS.length;
+    const button = cell.appendChild(el('button', '', ad.busy ? '…' : '🔄'));
+    button.disabled = ad.busy;
+    button.onclick = () => act(ad, '/ext/ad-load');
+    const checked = cell.appendChild(el('time', '', ago(Date.now() / 1000 - ad.upd)));
+    checked.title = `Сверено с биржей ${new Date(ad.upd * 1000).toLocaleString()}`;
+    if (ad.err) cell.appendChild(el('b', '', ad.err));
+    if (ad.txt) cell.append(ad.txt);
     return res;
   }
 
@@ -296,7 +313,7 @@
     observer.disconnect(); // our own writes must not wake it
     for (const old of document.querySelectorAll(`.${BOX}`)) old.remove();
     if (!ads.length) return;
-    for (const [row, ad] of placed()) row.after(box(row, ad));
+    for (const [row, ad] of placed()) row.after(box(row, ad), ...(ad.upd ? [source(row, ad)] : []));
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
   }
 

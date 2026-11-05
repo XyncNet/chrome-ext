@@ -153,6 +153,44 @@ tr:has(+ .xync-tags)::after {
   text-overflow: ellipsis;
 }
 
+/* The condition under the fields, across the columns. width: a cell of them all takes none of the
+   first column's. */
+table:has(.xync-tags) .source td {
+  width: auto !important;
+}
+
+.xync-tags.source > * {
+  padding: 0 0 12px !important;
+  color: #81858c;
+  font: 400 11px/16px system-ui, sans-serif;
+  overflow-wrap: anywhere;
+}
+
+.xync-tags.source button {
+  margin-right: 6px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.xync-tags.source button:disabled {
+  cursor: wait;
+}
+
+.xync-tags.source time {
+  margin-right: 8px;
+  font-weight: 600;
+}
+
+.xync-tags.source b {
+  margin-right: 8px;
+  color: #dc2626;
+  font-weight: 400;
+}
+
 /* The fix of a tag: over the page, its own colors on Bybit's light and dark themes alike. */
 .xync-fix {
   position: absolute;
