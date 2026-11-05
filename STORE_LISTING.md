@@ -36,7 +36,7 @@ How it works:
 Agent setup only runs when you click the extension. It only works on Bybit and HTX
 and sends data solely to api.xync.net. On Bybit's USDT/RUB P2P pages it also shows
 Xync's parsed ad conditions under the ads and filters the ads by them, for users
-signed in to Xync, sending only the listed ads' IDs and the chosen filter. It collects
+signed in to Xync, sending only the listed ads' IDs, which of them Bybit marks as fast, and the chosen filter. It collects
 no browsing history and does nothing in the background on other sites. See the privacy
 policy for full details.
 

@@ -14,11 +14,13 @@
   const onPage = () => PAGE.test(location.pathname);
   const filtering = () => onPage() && !!localStorage.getItem(FILTER);
   const post = (msg) => window.postMessage(msg, location.origin);
+  // "Fast release" of an ad that sells, "Fast payment" of one that buys: the page reads just that flag.
+  const fast = (a) => (a.side ? a.latestReleaseTimeHighlight : a.latestPayTimeHighlight);
 
   function forward(body) {
     try {
       const items = (typeof body === 'string' ? JSON.parse(body) : body)?.result?.items;
-      if (items) post({ xyncAds: onPage() ? items.map((a) => ({ id: a.id, nick: a.nickName })) : null });
+      if (items) post({ xyncAds: onPage() ? items.map((a) => ({ id: a.id, nick: a.nickName, fast: fast(a) })) : null });
     } catch {} // not json (WAF page etc): nothing to show
   }
 
@@ -48,7 +50,7 @@
         done(data.ids && items.filter((a) => data.ids.includes(a.id)));
       };
       window.addEventListener('message', onReply);
-      post({ xyncBook: id, ids: items.map((a) => a.id) });
+      post({ xyncBook: id, ids: items.map((a) => a.id), fast: items.filter(fast).map((a) => a.id) });
     });
 
   let memo = {};

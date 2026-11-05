@@ -34,8 +34,8 @@ reads and transmits:
   are included only when you type them in.
 
 On Bybit's USDT/RUB P2P pages, without any click, the Extension reads the ad list
-the page itself loads and sends the IDs of the listed ads — public data of other
-users' ads, nothing about your exchange account — to `https://api.xync.net/ext/ad-tags`,
+the page itself loads and sends the IDs of the listed ads, marking those Bybit shows as
+fast — public data of other users' ads, nothing about your exchange account — to `https://api.xync.net/ext/ad-tags`,
 and displays the reply on the page. A button you click on an ad sends that ad's ID to
 `https://api.xync.net/ext/ad-parse` or `/ext/ad-load`. With a filter on, it loads the full ad list with
 your Bybit session the way the page does, sends those IDs and the filter you chose to

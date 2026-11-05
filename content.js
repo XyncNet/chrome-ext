@@ -170,18 +170,19 @@
     on = !!list;
     badge();
     const ids = list?.map((a) => a.id) ?? [];
-    const { data } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids }) : {};
+    const fast = list?.filter((a) => a.fast).map((a) => a.id);
+    const { data } = ids.length ? await api('/ext/ad-tags', { host: location.host, ids, fast }) : {};
     if (me !== listing) return;
     // No reply is no news of these ads, not that the backend doesn't know them.
     ads = data ? list.map((a) => ({ id: a.id, nick: norm(a.nick), known: a.id in data, ...data[a.id] })) : [];
     render();
   }
 
-  async function filter({ xyncBook, ids }) {
+  async function filter({ xyncBook, ids, fast }) {
     on = true;
     count = '…';
     badge();
-    const { data } = await api('/ext/ad-tags', { host: location.host, ids, ...saved });
+    const { data } = await api('/ext/ad-tags', { host: location.host, ids, fast, ...saved });
     window.postMessage({ xyncKept: xyncBook, ids: data ? Object.keys(data) : null }, location.origin);
     count = data ? `${Object.keys(data).length}/${ids.length}` : '';
     badge();
