@@ -1,12 +1,13 @@
 // On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
 // parsed field in a place of its own, with a button to get what's missing, and keeps the filter
-// set in the panel (filter.js).
+// set in the panel (filter.js). An admin also sees the condition's id and can fix a tag by a click.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
 // text the panel shows. An error stays till the page reloads.
 (() => {
   const BOX = 'xync-tags';
+  const FIX = 'xync-fix';
   const FILTER = 'xyncFilter'; // localStorage, hook.js reads it at request time
   const NO_LOGIN = 'Нужен вход в Xync';
   const FRESH = 300; // s: a parse this young isn't offered again
@@ -23,13 +24,15 @@
   ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
-  let ads = []; // current listing in page order: [{id, nick, known, tags, at, busy, err}]
+  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, busy, err}]
   let latest = null; // the same as hook.js gave it
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
   let on = false; // a USDT/RUB P2P page: Bybit changes the currency without a page load
   let count = ''; // what the filter kept
   let error = '';
+  let values; // the reply with the fields' values for a fix, kept once it's a good one
+  let fixer; // the open fix of a tag
 
   // Only about 4 characters fit on the badge: "14/500" would read "4/50", the panel has it all.
   const badge = () => chrome.runtime.sendMessage({ badge: !on ? '' : error ? '!' : count.split('/')[0] });
@@ -115,6 +118,7 @@
   function status(ad) {
     const res = el('div', STATUS);
     const age = Date.now() / 1000 - ad.at;
+    if (ad.cond) res.append(`#${ad.cond}`);
     if (ad.at) res.appendChild(el('time', '', ago(age))).title = `Разобрано ${new Date(ad.at * 1000).toLocaleString()}`;
     else if (ad.known && ad.tags) res.append('нет условия');
     const action = !ad.known
@@ -131,6 +135,68 @@
     return res;
   }
 
+  function closeFix() {
+    fixer?.remove();
+    fixer = null;
+  }
+
+  // An admin's click on a tag: the field's values to choose from, or the tag's text to edit. The
+  // backend takes either. Outside of the body: what's in it wakes the observer, and the rebuilt
+  // rows would lose the next click.
+  async function fix(tag, ad, field) {
+    const { left, bottom } = tag.getBoundingClientRect();
+    const { data } = await (values ||= api('/ext/cond-opts'));
+    if (!data) {
+      values = null;
+      return;
+    }
+    closeFix();
+    const pop = (fixer = el('div', FIX));
+    const note = el('b');
+
+    async function send(value) {
+      pop.inert = true;
+      note.textContent = '…';
+      const { error } = await api('/ext/cond-fix', { cond_id: ad.cond, field, value });
+      pop.inert = false;
+      note.textContent = error ?? '';
+      if (error) return;
+      pop.remove();
+      report('');
+      listed(latest);
+    }
+
+    if (data[field])
+      for (const [value, label] of Object.entries(data[field])) {
+        const option = pop.appendChild(el('button', '', label));
+        option.disabled = label === ad.tags[field];
+        option.onclick = () => send(value);
+      }
+    else {
+      const form = pop.appendChild(el('form'));
+      const input = form.appendChild(el('input'));
+      input.value = ad.tags[field];
+      form.appendChild(el('button', '', 'OK'));
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        send(input.value);
+      };
+    }
+    pop.appendChild(el('button', 'drop', 'Убрать')).onclick = () => send(null);
+    pop.append(note);
+    document.documentElement.append(pop);
+    pop.querySelector('input')?.select();
+    pop.style.left = `${scrollX + Math.min(left, innerWidth - pop.offsetWidth - 16)}px`;
+    pop.style.top = `${scrollY + bottom + 4}px`;
+  }
+
+  document.addEventListener('mousedown', ({ target }) => {
+    if (!fixer?.contains(target)) closeFix();
+  });
+  document.addEventListener('keydown', ({ key }) => {
+    if (key === 'Escape') closeFix();
+  });
+
   // A sibling of the row, not its child: the page owns the row and re-renders it at will.
   function box(row, ad) {
     const isTr = row.tagName === 'TR';
@@ -143,6 +209,10 @@
           const slot = slots.appendChild(el('span', '', ad.tags?.[field]));
           slot.dataset.field = field;
           slot.title = slot.textContent;
+          if (ad.cond && slot.textContent) {
+            slot.classList.add('fix');
+            slot.onclick = () => fix(slot, ad, field);
+          }
         }
       }
     }

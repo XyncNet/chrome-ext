@@ -105,6 +105,15 @@ tr:has(+ .xync-tags)::after {
   visibility: hidden;
 }
 
+/* An admin's: a click fixes it. Inside: its neighbours and the cell would clip an outline. */
+.xync-tags span.fix {
+  cursor: pointer;
+}
+
+.xync-tags span.fix:hover {
+  box-shadow: inset 0 0 0 2px #2563eb;
+}
+
 /* Under the price: it's the one column with room to spare. */
 .xync-tags .status {
   display: flex;
@@ -135,6 +144,81 @@ tr:has(+ .xync-tags)::after {
   overflow: hidden;
   color: #dc2626;
   text-overflow: ellipsis;
+}
+
+/* The fix of a tag: over the page, its own colors on Bybit's light and dark themes alike. */
+.xync-fix {
+  position: absolute;
+  z-index: 100000;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: max-content;
+  max-width: 320px;
+  padding: 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #111;
+  background: #fff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+  font: 600 12px/20px system-ui, sans-serif;
+}
+
+.xync-fix[inert] {
+  opacity: 0.6;
+}
+
+.xync-fix button {
+  padding: 1px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #111;
+  background: #f1f5f9;
+  font: inherit;
+  cursor: pointer;
+}
+
+.xync-fix button:hover {
+  border-color: #2563eb;
+}
+
+.xync-fix button:disabled {
+  border-color: #2563eb;
+  color: #2563eb;
+  background: none;
+  cursor: default;
+}
+
+.xync-fix .drop {
+  color: #dc2626;
+}
+
+.xync-fix form {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.xync-fix input {
+  flex: 1;
+  min-width: 220px;
+  padding: 1px 6px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #111;
+  background: #fff;
+  font: inherit;
+}
+
+.xync-fix b {
+  width: 100%;
+  color: #dc2626;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.xync-fix b:empty {
+  display: none;
 }
 
 /* A color per parsed field, the same in every ad; paired fields share a hue. Solid, so a tag
