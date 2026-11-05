@@ -1,6 +1,7 @@
 // On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
 // parsed field in a place of its own, with a button to get what's missing, and keeps the filter
-// set in the panel (filter.js). An admin also sees the condition's id and can fix a tag by a click.
+// set in the panel (filter.js). An admin also sees the condition's id, fixes a tag by a click and
+// adds a field the parse has missed.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
@@ -12,12 +13,13 @@
   const NO_LOGIN = 'Нужен вход в Xync';
   const FRESH = 300; // s: a parse this young isn't offered again
   const STATUS = 'status';
+  const ADD = 'add';
   // The ad's parse under the ad, in Bybit's columns, by the question each answers: who's the
   // maker | is the price what it seems | what sum | how to pay | what's asked of the buyer. A
   // field's place is its slot here, taken even with nothing in it, so it's the same in every ad.
   const COLUMNS = [
     ['is_intermediary', 'intermed_forbid', 'contact', 'mtl_like'],
-    ['abuser', STATUS],
+    ['abuser', ADD, STATUS],
     ['scale', 'ppo', 'fix_amounts'],
     ['banks', 'cash_cities', 'from_party', 'to_party', 'trans_type'],
     ['slip', 'lk', 'cred', 'slavic'],
@@ -31,7 +33,6 @@
   let on = false; // a USDT/RUB P2P page: Bybit changes the currency without a page load
   let count = ''; // what the filter kept
   let error = '';
-  let values; // the reply with the fields' values for a fix, kept once it's a good one
   let fixer; // the open fix of a tag
 
   // Only about 4 characters fit on the badge: "14/500" would read "4/50", the panel has it all.
@@ -94,8 +95,8 @@
 
   function ago(sec) {
     const min = Math.floor(sec / 60);
-    if (min < 60) return min ? `${min} мин назад` : 'только что';
-    return min < 1440 ? `${Math.floor(min / 60)} ч назад` : `${Math.floor(min / 1440)} дн назад`;
+    if (min < 60) return min ? `${min} мин` : 'только что';
+    return min < 1440 ? `${Math.floor(min / 60)} ч` : `${Math.floor(min / 1440)} дн`;
   }
 
   // Asks for the ad's parse or for the ad itself, then asks about the whole listing again: a
@@ -140,24 +141,88 @@
     fixer = null;
   }
 
-  // An admin's click on a tag: the field's values to choose from, or the tag's text to edit. The
-  // backend takes either. Outside of the body: what's in it wakes the observer, and the rebuilt
-  // rows would lose the next click.
-  async function fix(tag, ad, field) {
-    const { left, bottom } = tag.getBoundingClientRect();
-    const { data } = await (values ||= api('/ext/cond-opts'));
-    if (!data) {
-      values = null;
+  // Several of a list: the chosen first, a search over it, and the banks' switch of how they apply.
+  function picker(pop, spec, send) {
+    const chosen = new Set(spec.val);
+    let side = spec.val ? spec.side : true;
+    if (spec.sides) {
+      const sides = pop.appendChild(el('div', 'sides'));
+      for (const [label, value] of Object.entries(spec.sides)) {
+        const button = sides.appendChild(el('button', '', label));
+        button.disabled = value === side;
+        button.onclick = () => {
+          side = value;
+          for (const b of sides.children) b.disabled = b === button;
+        };
+      }
+    }
+    const search = pop.appendChild(el('input'));
+    search.placeholder = 'Поиск';
+    const list = pop.appendChild(el('div', 'list'));
+    const rows = Object.entries(spec.opts)
+      .sort(([a, x], [b, y]) => chosen.has(b) - chosen.has(a) || x.localeCompare(y))
+      .map(([id, label]) => {
+        const row = list.appendChild(el('label', '', label));
+        row.title = label;
+        const tick = el('input');
+        tick.type = 'checkbox';
+        tick.checked = chosen.has(id);
+        tick.onchange = () => chosen[tick.checked ? 'add' : 'delete'](id);
+        row.prepend(tick);
+        return [row, label.toLowerCase()];
+      });
+    search.oninput = () => {
+      for (const [row, label] of rows) row.hidden = !label.includes(search.value.trim().toLowerCase());
+    };
+    pop.appendChild(el('button', '', 'OK')).onclick = () => send([...chosen], side);
+  }
+
+  // The input of a field, of the kind the backend gave it (`cond_form`).
+  function input(pop, spec, send) {
+    if (spec.kind === 'many') return picker(pop, spec, send);
+    if (spec.kind === 'one') {
+      for (const [value, label] of Object.entries(spec.opts)) {
+        const option = pop.appendChild(el('button', '', label));
+        option.disabled = value === spec.val;
+        option.onclick = () => send(value);
+      }
       return;
     }
+    const form = pop.appendChild(el('form'));
+    const field = form.appendChild(el('input'));
+    field.required = true;
+    if (spec.kind === 'int') Object.assign(field, { type: 'number', min: 1, max: spec.max, step: 1 });
+    if (spec.kind === 'ints') field.pattern = '\\d+(\\s*,\\s*\\d+)*';
+    field.value = [spec.val ?? []].flat().join(', ');
+    form.appendChild(el('button', '', 'OK'));
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      const { value } = field;
+      send({ int: +value, ints: value.split(',').map(Number) }[spec.kind] ?? value);
+    };
+  }
+
+  // An admin's click on a tag, or on "+param": then first the fields not parsed yet, to pick one.
+  // Outside of the body: what's in it wakes the observer, and rebuilt rows lose the next click.
+  async function fix(anchor, ad, field) {
+    const { left, bottom } = anchor.getBoundingClientRect();
     closeFix();
     const pop = (fixer = el('div', FIX));
-    const note = el('b');
+    const note = pop.appendChild(el('b', '', '…'));
+    const place = () => {
+      pop.style.left = `${scrollX + Math.min(left, innerWidth - pop.offsetWidth - 16)}px`;
+      pop.style.top = `${scrollY + bottom + 4}px`;
+    };
+    document.documentElement.append(pop);
+    place();
+    const { data, error } = await api(`/ext/cond-opts?cond_id=${ad.cond}`);
+    note.textContent = error ?? '';
+    if (!data) return;
 
-    async function send(value) {
+    async function send(name, value, side) {
       pop.inert = true;
       note.textContent = '…';
-      const { error } = await api('/ext/cond-fix', { cond_id: ad.cond, field, value });
+      const { error } = await api('/ext/cond-fix', { cond_id: ad.cond, field: name, value, side });
       pop.inert = false;
       note.textContent = error ?? '';
       if (error) return;
@@ -166,28 +231,24 @@
       listed(latest);
     }
 
-    if (data[field])
-      for (const [value, label] of Object.entries(data[field])) {
-        const option = pop.appendChild(el('button', '', label));
-        option.disabled = label === ad.tags[field];
-        option.onclick = () => send(value);
-      }
-    else {
-      const form = pop.appendChild(el('form'));
-      const input = form.appendChild(el('input'));
-      input.value = ad.tags[field];
-      form.appendChild(el('button', '', 'OK'));
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        send(input.value);
-      };
+    function edit(name) {
+      const spec = data[name];
+      pop.replaceChildren(el('i', '', spec.name));
+      input(pop, spec, (value, side) => send(name, value, side));
+      if (spec.val !== null) pop.appendChild(el('button', 'drop', 'Убрать')).onclick = () => send(name, null);
+      pop.append(note);
+      const first = pop.querySelector('input');
+      first?.focus();
+      first?.select();
+      place();
     }
-    pop.appendChild(el('button', 'drop', 'Убрать')).onclick = () => send(null);
+
+    if (field) return edit(field);
+    pop.replaceChildren();
+    for (const [name, spec] of Object.entries(data))
+      if (spec.val === null) pop.appendChild(el('button', '', spec.name)).onclick = () => edit(name);
     pop.append(note);
-    document.documentElement.append(pop);
-    pop.querySelector('input')?.select();
-    pop.style.left = `${scrollX + Math.min(left, innerWidth - pop.offsetWidth - 16)}px`;
-    pop.style.top = `${scrollY + bottom + 4}px`;
+    place();
   }
 
   document.addEventListener('mousedown', ({ target }) => {
@@ -205,7 +266,12 @@
       const slots = res.appendChild(el(isTr ? 'td' : 'div')).appendChild(el('div'));
       for (const field of fields) {
         if (field === STATUS) slots.append(status(ad));
-        else {
+        else if (field === ADD) {
+          if (ad.cond && ad.at) {
+            const add = slots.appendChild(el('button', ADD, '+param'));
+            add.onclick = () => fix(add, ad);
+          }
+        } else {
           const slot = slots.appendChild(el('span', '', ad.tags?.[field]));
           slot.dataset.field = field;
           slot.title = slot.textContent;

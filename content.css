@@ -32,8 +32,8 @@ body:has(.trade-list) #__uniframe_ada_container {
 
 /* The columns made to fit what's under the ads: Bybit gives the most to the limits and the least
    to the payment, the busiest of them. */
-table:has(.xync-tags) :is(th, td):nth-child(1) { width: 24% !important; }
-table:has(.xync-tags) :is(th, td):nth-child(2) { width: 16% !important; min-width: 0 !important; }
+table:has(.xync-tags) :is(th, td):nth-child(1) { width: 22% !important; }
+table:has(.xync-tags) :is(th, td):nth-child(2) { width: 18% !important; min-width: 0 !important; }
 table:has(.xync-tags) :is(th, td):nth-child(3) { width: 19% !important; min-width: 0 !important; }
 table:has(.xync-tags) :is(th, td):nth-child(4) { width: 22% !important; }
 
@@ -74,7 +74,7 @@ tr:has(+ .xync-tags)::after {
 }
 
 .xync-tags > :nth-child(2) > div {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
 .xync-tags > :nth-child(4) > div {
@@ -116,6 +116,7 @@ tr:has(+ .xync-tags)::after {
 
 /* Under the price: it's the one column with room to spare. */
 .xync-tags .status {
+  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -125,7 +126,8 @@ tr:has(+ .xync-tags)::after {
   white-space: nowrap;
 }
 
-.xync-tags .status button {
+.xync-tags .status button,
+.xync-tags .add {
   padding: 0 7px;
   border: 1px solid currentColor;
   border-radius: 4px;
@@ -138,6 +140,11 @@ tr:has(+ .xync-tags)::after {
 .xync-tags .status button:disabled {
   color: #81858c;
   cursor: wait;
+}
+
+.xync-tags .status time {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .xync-tags .status b {
@@ -199,7 +206,50 @@ tr:has(+ .xync-tags)::after {
   width: 100%;
 }
 
-.xync-fix input {
+.xync-fix i {
+  width: 100%;
+  color: #64748b;
+  font-style: normal;
+  font-weight: 400;
+}
+
+.xync-fix .sides {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.xync-fix .list {
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.xync-fix label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-weight: 400;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.xync-fix label[hidden] {
+  display: none;
+}
+
+.xync-fix input[type='checkbox'] {
+  flex: none;
+  margin: 0;
+}
+
+.xync-fix > input {
+  flex: 1 0 100%;
+}
+
+.xync-fix input:not([type='checkbox']) {
   flex: 1;
   min-width: 220px;
   padding: 1px 6px;
