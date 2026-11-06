@@ -1,7 +1,7 @@
 // On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
 // parsed field in a place of its own, with a button to get what's missing, and keeps the filter
 // set in the panel (filter.js). An admin also sees the condition's id and text, reads the ad from
-// the exchange again, fixes a tag by a click and adds a field the parse has missed.
+// the exchange again, and sees the fields the parse has missed, faintly: a click sets any field.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
@@ -13,20 +13,19 @@
   const NO_LOGIN = 'Нужен вход в Xync';
   const FRESH = 300; // s: a parse this young isn't offered again
   const STATUS = 'status';
-  const ADD = 'add';
   // The ad's parse under the ad, in Bybit's columns, by the question each answers: who's the
   // maker | is the price what it seems | what sum | how to pay | what's asked of the buyer. A
   // field's place is its slot here, taken even with nothing in it, so it's the same in every ad.
   const COLUMNS = [
     ['is_intermediary', 'intermed_forbid', 'contact', 'mtl_like'],
-    ['abuser', ADD, STATUS],
+    ['abuser', STATUS],
     ['scale', 'ppo', 'fix_amounts'],
     ['banks', 'cash_cities', 'from_party', 'to_party', 'trans_type'],
     ['slip', 'lk', 'cred', 'slavic'],
   ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
-  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, upd, txt, busy, err}]
+  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, upd, masked, txt, names, busy, err}]
   let latest = null; // the same as hook.js gave it
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
@@ -119,6 +118,7 @@
   function status(ad) {
     const res = el('div', STATUS);
     const age = Date.now() / 1000 - ad.at;
+    if (ad.masked) res.append('🎭');
     if (ad.cond) res.append(`#${ad.cond}`);
     if (ad.at) res.appendChild(el('time', '', ago(age))).title = `Разобрано ${new Date(ad.at * 1000).toLocaleString()}`;
     else if (ad.known && ad.tags) res.append('нет условия');
@@ -219,7 +219,7 @@
     };
   }
 
-  // An admin's click on a tag, or on "+param": then first the fields not parsed yet, to pick one.
+  // An admin's click on a slot, parsed or not.
   // Outside of the body: what's in it wakes the observer, and rebuilt rows lose the next click.
   async function fix(anchor, ad, field) {
     const { left, bottom } = anchor.getBoundingClientRect();
@@ -260,12 +260,7 @@
       place();
     }
 
-    if (field) return edit(field);
-    pop.replaceChildren();
-    for (const [name, spec] of Object.entries(data))
-      if (spec.val === null) pop.appendChild(el('button', '', spec.name)).onclick = () => edit(name);
-    pop.append(note);
-    place();
+    edit(field);
   }
 
   document.addEventListener('mousedown', ({ target }) => {
@@ -283,17 +278,15 @@
       const slots = res.appendChild(el(isTr ? 'td' : 'div')).appendChild(el('div'));
       for (const field of fields) {
         if (field === STATUS) slots.append(status(ad));
-        else if (field === ADD) {
-          if (ad.cond && ad.at) {
-            const add = slots.appendChild(el('button', ADD, '+param'));
-            add.onclick = () => fix(add, ad);
-          }
-        } else {
-          const slot = slots.appendChild(el('span', '', ad.tags?.[field]));
+        else {
+          const tag = ad.tags?.[field];
+          // `names` come to an admin alone. No parse, no field to set: the fix would make one out of nothing.
+          const slot = slots.appendChild(el('span', '', tag ?? (ad.at && ad.names?.[field])));
           slot.dataset.field = field;
           slot.title = slot.textContent;
           if (ad.cond && slot.textContent) {
             slot.classList.add('fix');
+            slot.classList.toggle('blank', !tag);
             slot.onclick = () => fix(slot, ad, field);
           }
         }

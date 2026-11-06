@@ -74,7 +74,7 @@ tr:has(+ .xync-tags)::after {
 }
 
 .xync-tags > :nth-child(2) > div {
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .xync-tags > :nth-child(4) > div {
@@ -114,6 +114,15 @@ tr:has(+ .xync-tags)::after {
   box-shadow: inset 0 0 0 2px #2563eb;
 }
 
+/* A field the parse has no value for: its name, barely there till the pointer finds it. */
+.xync-tags span.blank {
+  opacity: 0.15;
+}
+
+.xync-tags span.blank:hover {
+  opacity: 1;
+}
+
 /* Under the price: it's the one column with room to spare. */
 .xync-tags .status {
   grid-column: 1 / -1;
@@ -126,8 +135,7 @@ tr:has(+ .xync-tags)::after {
   white-space: nowrap;
 }
 
-.xync-tags .status button,
-.xync-tags .add {
+.xync-tags .status button {
   padding: 0 7px;
   border: 1px solid currentColor;
   border-radius: 4px;
