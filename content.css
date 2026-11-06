@@ -30,12 +30,17 @@ body:has(.trade-list) #__uniframe_ada_container {
   width: min(1200px, 100% - 32px) !important;
 }
 
-/* The columns made to fit what's under the ads: Bybit gives the most to the limits and the least
-   to the payment, the busiest of them. */
-table:has(.xync-tags) :is(th, td):nth-child(1) { width: 22% !important; }
-table:has(.xync-tags) :is(th, td):nth-child(2) { width: 18% !important; min-width: 0 !important; }
-table:has(.xync-tags) :is(th, td):nth-child(3) { width: 19% !important; min-width: 0 !important; }
-table:has(.xync-tags) :is(th, td):nth-child(4) { width: 22% !important; }
+/* The columns made to fit: Bybit gives the most to the limits and the least to the payment, which
+   here holds our fields of it, the most of any cell. */
+table:has(.xync-tags) :is(th, td):nth-child(1) { width: 21% !important; }
+table:has(.xync-tags) :is(th, td):nth-child(2) { width: 12% !important; min-width: 0 !important; }
+table:has(.xync-tags) :is(th, td):nth-child(3) { width: 17% !important; min-width: 0 !important; }
+table:has(.xync-tags) :is(th, td):nth-child(4) { width: 36% !important; }
+
+/* Bybit's payment methods, in the cell that has our fields instead. */
+td:has(> .xync-tags) > :not(.xync-tags) {
+  display: none !important;
+}
 
 .xync-tags {
   grid-column: 1 / -1;
@@ -44,14 +49,10 @@ table:has(.xync-tags) :is(th, td):nth-child(4) { width: 22% !important; }
 
 /* A part of the ad above: closer to it, with Bybit's divider under it, not between. !important:
    its table rules are the more specific and align the last cell right. */
-.xync-tags > * {
+.xync-tags:not(.payment) > * {
   padding: 0 12px 14px 0 !important;
   text-align: left !important;
   vertical-align: top !important;
-}
-
-.xync-tags > :last-child {
-  padding-right: 0 !important;
 }
 
 tr:has(+ .xync-tags) td {
@@ -62,31 +63,33 @@ tr:has(+ .xync-tags)::after {
   display: none !important;
 }
 
-/* Slots: a fixed grid of two lines, so a field keeps its place in every ad. width 0: however long
-   the text, it doesn't get to move Bybit's columns. */
-.xync-tags > * > div {
+/* Slots: a fixed grid of three, so a field keeps its place in every ad and the ones above and below
+   it line up. width 0: however long the text, it doesn't get to move Bybit's columns. */
+.xync-tags > * > div,
+.xync-tags.payment {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: 22px 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 22px;
   gap: 3px 4px;
   width: 0;
   min-width: 100%;
 }
 
-.xync-tags > :nth-child(2) > div {
-  grid-template-columns: minmax(0, 1fr);
+.xync-tags > :first-child > div {
+  grid-template-columns: 84px 76px minmax(0, 1fr);
 }
 
-.xync-tags > :nth-child(4) > div {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+.xync-tags > :nth-child(2) > div {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* The line's gap between columns, so that the grid is the same as the one under it. */
+.xync-tags.payment {
+  min-width: calc(100% - 12px);
 }
 
 .xync-tags [data-field='banks'] {
   grid-column: span 2;
-}
-
-.xync-tags [data-field='fix_amounts'] {
-  grid-column: 1 / -1;
 }
 
 .xync-tags span {
@@ -123,10 +126,9 @@ tr:has(+ .xync-tags)::after {
   opacity: 1;
 }
 
-/* Under the price: it's the one column with room to spare. */
 .xync-tags .status {
-  grid-column: 1 / -1;
   display: flex;
+  width: max-content;
   align-items: center;
   gap: 6px;
   min-width: 0;

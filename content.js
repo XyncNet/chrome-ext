@@ -1,5 +1,6 @@
-// On Bybit's USDT/RUB P2P pages: under each ad shows what Xync knows of its condition, each
-// parsed field in a place of its own, with a button to get what's missing, and keeps the filter
+// On Bybit's USDT/RUB P2P pages: shows what Xync knows of an ad's condition, each parsed field in a
+// place of its own: of the payment in Bybit's payment cell, instead of its methods, the rest in a line
+// under the ad, with a button to get what's missing. Keeps the filter
 // set in the panel (filter.js). An admin also sees the condition's id and text, reads the ad from
 // the exchange again, and sees the fields the parse has missed, faintly: a click sets any field.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
@@ -13,15 +14,18 @@
   const NO_LOGIN = 'Нужен вход в Xync';
   const FRESH = 300; // s: a parse this young isn't offered again
   const STATUS = 'status';
-  // The ad's parse under the ad, in Bybit's columns, by the question each answers: who's the
-  // maker | is the price what it seems | what sum | how to pay | what's asked of the buyer. A
-  // field's place is its slot here, taken even with nothing in it, so it's the same in every ad.
-  const COLUMNS = [
-    ['is_intermediary', 'intermed_forbid', 'contact', 'mtl_like'],
-    ['abuser', STATUS],
-    ['scale', 'ppo', 'fix_amounts'],
-    ['banks', 'cash_cities', 'from_party', 'to_party', 'trans_type'],
-    ['slip', 'lk', 'cred', 'slavic'],
+  // A field's place is its slot here, taken even with nothing in it, so it's the same in every ad.
+  // How the money goes, in Bybit's payment cell: its methods say nothing in RUB.
+  const PAYMENT = ['banks', 'cash_cities', 'from_party', 'to_party', 'trans_type', 'scale', 'ppo', 'fix_amounts'];
+  const PAYMENT_CELL = 3;
+  // The line under the ad, by Bybit's columns: who's the maker, what's the catch, what's asked of the
+  // buyer. Under the payment, in the grid of the payment's.
+  const LINE = [
+    ['is_intermediary', 'intermed_forbid', 'contact'],
+    ['mtl_like', 'abuser'],
+    ['slip', 'lk'],
+    ['slavic', 'cred', STATUS],
+    [],
   ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
@@ -137,19 +141,22 @@
   }
 
   // The condition across Bybit's columns: reading the ad from the exchange again, how long ago that
-  // last was, and the text. An admin's: `upd` comes to them alone. Errors too, there's room here.
+  // last was, and the text. An admin's: `upd` comes to them alone. Errors too, there's room here. An
+  // ad with no text has nothing to read: the backend refuses it (`Ex.ad_refresh`), so no button.
   function source(row, ad) {
     const isTr = row.tagName === 'TR';
     const res = el(isTr ? 'tr' : 'div', `${BOX} source`);
     const cell = res.appendChild(el(isTr ? 'td' : 'div'));
-    if (isTr) cell.colSpan = COLUMNS.length;
-    const button = cell.appendChild(el('button', '', ad.busy ? '…' : '🔄'));
-    button.disabled = ad.busy;
-    button.onclick = () => act(ad, '/ext/ad-load');
+    if (isTr) cell.colSpan = row.children.length;
+    if (ad.txt) {
+      const button = cell.appendChild(el('button', '', ad.busy ? '…' : '🔄'));
+      button.disabled = ad.busy;
+      button.onclick = () => act(ad, '/ext/ad-load');
+    }
     const checked = cell.appendChild(el('time', '', ago(Date.now() / 1000 - ad.upd)));
     checked.title = `Сверено с биржей ${new Date(ad.upd * 1000).toLocaleString()}`;
     if (ad.err) cell.appendChild(el('b', '', ad.err));
-    if (ad.txt) cell.append(ad.txt);
+    cell.append(ad.txt || 'пусто');
     return res;
   }
 
@@ -270,28 +277,32 @@
     if (key === 'Escape') closeFix();
   });
 
-  // A sibling of the row, not its child: the page owns the row and re-renders it at will.
+  function slot(ad, field) {
+    const tag = ad.tags?.[field];
+    // `names` come to an admin alone. No parse, no field to set: the fix would make one out of nothing.
+    const res = el('span', '', tag ?? (ad.at && ad.names?.[field]));
+    res.dataset.field = field;
+    res.title = res.textContent;
+    if (ad.cond && res.textContent) {
+      res.classList.add('fix');
+      res.classList.toggle('blank', !tag);
+      res.onclick = () => fix(res, ad, field);
+    }
+    return res;
+  }
+
+  // The line is a sibling of the row, not its child: the page owns the row and re-renders it at will.
+  // The payment does go in its cell, and render() puts it back after each of those re-renders.
   function box(row, ad) {
     const isTr = row.tagName === 'TR';
     const res = el(isTr ? 'tr' : 'div', BOX);
-    for (const fields of COLUMNS) {
+    for (const fields of LINE) {
       const slots = res.appendChild(el(isTr ? 'td' : 'div')).appendChild(el('div'));
-      for (const field of fields) {
-        if (field === STATUS) slots.append(status(ad));
-        else {
-          const tag = ad.tags?.[field];
-          // `names` come to an admin alone. No parse, no field to set: the fix would make one out of nothing.
-          const slot = slots.appendChild(el('span', '', tag ?? (ad.at && ad.names?.[field])));
-          slot.dataset.field = field;
-          slot.title = slot.textContent;
-          if (ad.cond && slot.textContent) {
-            slot.classList.add('fix');
-            slot.classList.toggle('blank', !tag);
-            slot.onclick = () => fix(slot, ad, field);
-          }
-        }
-      }
+      slots.append(...fields.map((field) => (field === STATUS ? status(ad) : slot(ad, field))));
     }
+    const payment = el('div', `${BOX} payment`);
+    payment.append(...PAYMENT.map((field) => slot(ad, field)));
+    (isTr ? row.children[PAYMENT_CELL] : res).append(payment);
     return res;
   }
 
