@@ -12,6 +12,10 @@
   let logins = 0; // a click on the login replaces the one that's waiting
   let loginNote = ''; // how it's going: over what the page says, it would be lost on the way back
 
+  // Fields that only make sense for some ways of paying: shown under `trans_type`, and only once it's filtered to one
+  // of these; hidden, they drop out of the filter.
+  const UNDER = { cash_cities: ['cash'], banks: ['sbp', 'card', 'atm_qr'] };
+
   const stateOf = (field, val) =>
     draft.only[field]?.includes(val) ? 'only' : draft.skip[field]?.includes(val) ? 'skip' : '';
 
@@ -27,7 +31,15 @@
 
   function draw(data) {
     $('groups').replaceChildren();
-    for (const [field, vals] of Object.entries(data)) {
+    const fields = Object.keys(data).filter((f) => !UNDER[f]);
+    fields.splice(fields.indexOf('trans_type') + 1, 0, ...Object.keys(UNDER).filter((f) => f in data));
+    for (const field of fields) {
+      if (UNDER[field] && !UNDER[field].some((t) => draft.only.trans_type?.includes(t))) {
+        delete draft.only[field];
+        delete draft.skip[field];
+        continue;
+      }
+      const vals = data[field];
       const group = $('groups').appendChild(document.createElement('div'));
       group.className = 'group';
       group.appendChild(document.createElement('b')).textContent = field;
@@ -37,7 +49,8 @@
         chip.className = stateOf(field, val);
         chip.onclick = () => {
           cycle(field, val);
-          chip.className = stateOf(field, val);
+          if (field === 'trans_type') draw(data);
+          else chip.className = stateOf(field, val);
         };
       }
     }
