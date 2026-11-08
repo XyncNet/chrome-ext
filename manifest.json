@@ -10,7 +10,7 @@
     "https://www.bybit.com/*",
     "https://www.htx.com/*",
     "https://www.mexc.com/*",
-    "https://api.xync.net/*"
+    "https://*.xync.net/*"
   ],
   "action": {
     "default_title": "Xync Agent Setter",

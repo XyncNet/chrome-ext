@@ -1,3 +1,6 @@
+// The one place of the Xync API's host: content.js and the panel reach it via this worker's `api()`.
+// `host_permissions` in manifest.json has to name it too.
+const API = 'https://api.xync.net';
 const ALLOWED_HOSTS = ['www.bybit.com', 'www.htx.com', 'www.mexc.com'];
 
 function updateIcon(tabId, url) {
@@ -129,7 +132,7 @@ async function api({ path, body }) {
   const headers = { ...(token && { Authorization: token }), ...(body && { 'content-type': 'application/json' }) };
   try {
     const init = { method: body ? 'POST' : 'GET', headers, body: body && JSON.stringify(body) };
-    const res = await fetch(`https://api.xync.net${path}`, init);
+    const res = await fetch(`${API}${path}`, init);
     const auth = res.headers.get('authorization');
     if (auth) await chrome.storage.local.set({ token: auth });
     const text = await res.text();

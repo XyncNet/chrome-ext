@@ -179,15 +179,10 @@ btn.addEventListener('click', async () => {
     }
 
     // POST to API
-    const res = await fetch('https://api.xync.net/public/set-agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
+    const { data, error } = await chrome.runtime.sendMessage({ path: '/public/set-agent', body: payload });
+    if (error) throw new Error(error);
 
-    if (!res.ok) throw new Error(`Server responded ${res.status}`);
-
-    const { exp, need } = await res.json();
+    const { exp, need } = data;
     const date = exp ? new Date(exp * 1000).toLocaleString('ru-RU') : null;
 
     if (need && need.length) {
