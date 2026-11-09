@@ -1,8 +1,9 @@
 // On Bybit's USDT/RUB P2P pages: shows what Xync knows of an ad's condition, each parsed field in a
 // place of its own: of the payment in Bybit's payment cell, instead of its methods, the rest in a line
 // under the ad, with a button to get what's missing. Keeps the filter
-// set in the panel (filter.js). An admin also sees the condition's id and text, reads the ad from
-// the exchange again, and sees the fields the parse has missed, faintly: a click sets any field.
+// set in the panel (filter.js). Anyone sees the fields the parse has missed, faintly: a click sets any
+// field; a parse of a non-admin the admin hasn't approved yet has dashed tags. An admin also sees the
+// condition's id and text and reads the ad from the exchange again.
 // Ads come from hook.js, which also applies the filter to the page; the backend is reached
 // through background.js (the page's CORS binds content scripts) and needs a Xync login.
 // The outcome goes on the extension's badge: how many the filter kept, "!" on an error, whose
@@ -29,7 +30,7 @@
   ];
   const saved = JSON.parse(localStorage.getItem(FILTER));
 
-  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, upd, masked, txt, names, busy, err}]
+  let ads = []; // current listing in page order: [{id, nick, known, tags, at, cond, pending, upd, masked, txt, names, busy, err}]
   let latest = null; // the same as hook.js gave it
   let listing = 0; // latest listing's number: an older one's late reply must not win
   let timer = 0;
@@ -123,7 +124,7 @@
     const res = el('div', STATUS);
     const age = Date.now() / 1000 - ad.at;
     if (ad.masked) res.append('🎭');
-    if (ad.cond) res.append(`#${ad.cond}`);
+    if (ad.cond && ad.upd) res.append(`#${ad.cond}`); // `upd` comes to an admin alone
     if (ad.at) res.appendChild(el('time', '', ago(age))).title = `Разобрано ${new Date(ad.at * 1000).toLocaleString()}`;
     else if (ad.known && ad.tags) res.append('нет условия');
     const action = !ad.known
@@ -226,7 +227,7 @@
     };
   }
 
-  // An admin's click on a slot, parsed or not.
+  // A click on a slot, parsed or not.
   // Outside of the body: what's in it wakes the observer, and rebuilt rows lose the next click.
   async function fix(anchor, ad, field) {
     const { left, bottom } = anchor.getBoundingClientRect();
@@ -279,10 +280,11 @@
 
   function slot(ad, field) {
     const tag = ad.tags?.[field];
-    // `names` come to an admin alone. No parse, no field to set: the fix would make one out of nothing.
+    // No parse, no field to set: the fix would make one out of nothing.
     const res = el('span', '', tag ?? (ad.at && ad.names?.[field]));
     res.dataset.field = field;
     res.title = res.textContent;
+    res.classList.toggle('pending', !!(tag && ad.pending));
     if (ad.cond && res.textContent) {
       res.classList.add('fix');
       res.classList.toggle('blank', !tag);

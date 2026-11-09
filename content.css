@@ -108,13 +108,21 @@ tr:has(+ .xync-tags)::after {
   visibility: hidden;
 }
 
-/* An admin's: a click fixes it. Inside: its neighbours and the cell would clip an outline. */
+/* A click fixes it. Inside: its neighbours and the cell would clip an outline. */
 .xync-tags span.fix {
   cursor: pointer;
 }
 
 .xync-tags span.fix:hover {
   box-shadow: inset 0 0 0 2px #2563eb;
+}
+
+/* A parse sent by a non-admin the admin hasn't approved yet. The border eats the padding and the margins the height:
+   the tag stays the size of the others. */
+.xync-tags span.pending {
+  margin: -1px 0;
+  padding: 0 5px;
+  border: 1px dashed #fff;
 }
 
 /* A field the parse has no value for: its name, barely there till the pointer finds it. */
